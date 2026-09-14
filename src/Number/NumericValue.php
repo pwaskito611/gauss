@@ -6,6 +6,7 @@ namespace Gauss\Number;
 
 interface NumericValue
 {
+    public function one(): NumericValue;
     public function add(NumericValue $other): NumericValue;
     public function sub(NumericValue $other): NumericValue;
     public function mul(NumericValue $other): NumericValue;

@@ -16,6 +16,11 @@ final class Real implements NumericValue
     ) {
     }
 
+    public function one(): NumericValue
+    {
+        return new self('1');
+    }
+
     public function add(NumericValue $other): NumericValue
     {
         return match (true) {

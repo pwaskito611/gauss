@@ -14,6 +14,11 @@ final class Rational implements NumericValue
     private readonly int $numerator;
     private readonly int $denominator;
 
+    public function one(): NumericValue
+    {
+        return new self(1);
+    }
+
     public function __construct(
         int $numerator,
         int $denominator = 1,

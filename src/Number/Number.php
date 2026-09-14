@@ -6,7 +6,7 @@ namespace Gauss\Number;
 
 use InvalidArgumentException;
 
-final class Number
+final class Number implements NumericValue
 {
     private function __construct(
         private readonly NumericValue $value,
@@ -15,6 +15,10 @@ final class Number
 
     public static function of(int|float|string|NumericValue $value): self
     {
+        if ($value instanceof self) {
+            return $value;
+        }
+
         if ($value instanceof NumericValue) {
             return new self($value);
         }
@@ -106,6 +110,11 @@ final class Number
                 self::of($other)->value
             )
         );
+    }
+
+    public function one(): NumericValue
+    {
+        return new self($this->value->one());
     }
 
     public function sub(int|float|string|NumericValue $other): self

@@ -17,6 +17,11 @@ final class Complex implements NumericValue
     ) {
     }
 
+    public function one(): NumericValue
+    {
+        return new self('1', '0');
+    }
+
     public function add(NumericValue $other): NumericValue
     {
         $other = self::complex($other);
