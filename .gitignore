@@ -1,0 +1,35 @@
+# Composer
+/vendor/
+composer.lock
+
+# PHPUnit
+/.phpunit.cache/
+/phpunit.xml
+.phpunit.result.cache
+
+# PHP CS Fixer / PHPStan / Psalm
+/.php-cs-fixer.cache
+/.php-cs-fixer.php
+/phpstan.neon
+/psalm.xml
+
+# IDE / Editor
+/.idea/
+/.vscode/
+*.sublime-*
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+
+# Build / Coverage
+/build/
+/coverage/
+*.log
+
+/note/
