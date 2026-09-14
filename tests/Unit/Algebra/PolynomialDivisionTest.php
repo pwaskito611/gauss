@@ -69,4 +69,18 @@ final class PolynomialDivisionTest extends TestCase
         self::assertSame($dividend->evaluate(Number::of(2))->value(), $reconstructed->evaluate(Number::of(2))->value());
         self::assertSame($dividend->evaluate(Number::of(3))->value(), $reconstructed->evaluate(Number::of(3))->value());
     }
+
+    public function testDecimalDivisionPreservesNumberPrecision(): void
+    {
+        $dividend = Polynomial::constant(Number::of('0.2'));
+        $divisor = Polynomial::constant(Number::of('0.2'));
+
+        $division = $dividend->divide($divisor);
+
+        self::assertSame(
+            '1.00000000000000000000000000000000000000000000000000',
+            $division->quotient()->constantTerm()->value()
+        );
+        self::assertTrue($division->remainder()->isZero());
+    }
 }

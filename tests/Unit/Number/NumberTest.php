@@ -352,6 +352,51 @@ final class NumberTest extends TestCase
         );
     }
 
+    public function testDecimalSubtractionUsesNumberPrecision(): void
+    {
+        $result = Number::of('0.2')->sub(Number::of('0.1'));
+
+        self::assertSame(Real::class, $result->type());
+        self::assertSame(
+            '0.10000000000000000000000000000000000000000000000000',
+            $result->value()
+        );
+    }
+
+    public function testDecimalAdditionUsesNumberPrecision(): void
+    {
+        $result = Number::of('0.1')->add(Number::of('0.2'));
+
+        self::assertSame(
+            '0.30000000000000000000000000000000000000000000000000',
+            $result->value()
+        );
+    }
+
+    public function testDecimalSubtractionChainUsesNumberPrecision(): void
+    {
+        $result = Number::of('0.3')->sub(Number::of('0.2'));
+
+        self::assertSame(
+            '0.10000000000000000000000000000000000000000000000000',
+            $result->value()
+        );
+    }
+
+    public function testRepeatedDecimalOperationsDoNotAccumulateBinaryFloatError(): void
+    {
+        $result = Number::of('0.0');
+
+        for ($i = 0; $i < 10; $i++) {
+            $result = $result->add(Number::of('0.1'));
+        }
+
+        self::assertSame(
+            '1.00000000000000000000000000000000000000000000000000',
+            $result->value()
+        );
+    }
+
     public function testComplexArithmetic(): void
     {
         $result = Number::of('2+3i')

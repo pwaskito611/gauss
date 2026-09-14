@@ -118,6 +118,21 @@ final class PolynomialTest extends TestCase
         self::assertSame(Real::class, $polynomial->evaluate(Number::of('2.0'))->type());
     }
 
+    public function testDecimalCoefficientArithmeticUsesNumberPrecision(): void
+    {
+        $polynomial = Polynomial::of([
+            0 => Number::of('0.1'),
+            1 => Number::of('0.2'),
+        ]);
+
+        $result = $polynomial->evaluate(Number::of(1));
+
+        self::assertSame(
+            '0.30000000000000000000000000000000000000000000000000',
+            $result->value()
+        );
+    }
+
     public function testOperationsCanBeComposedAsPuzzlePieces(): void
     {
         $polynomial = Polynomial::of([
