@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Gauss\Number;
 
 use InvalidArgumentException;
+use LogicException;
 
 final class Number implements NumericValue
 {
@@ -144,6 +145,72 @@ final class Number implements NumericValue
         );
     }
 
+    public function compare(int|float|string|NumericValue $other): int
+    {
+        $left = $this->decimalValue();
+        $right = self::of($other)->decimalValue();
+
+        return bccomp($left, $right, 50);
+    }
+
+    public function abs(): self
+    {
+        if ($this->compare(0) < 0) {
+            return $this->mul(-1);
+        }
+
+        return $this;
+    }
+
+    public function pow(int $exponent): self
+    {
+        if ($exponent < 0) {
+            return $this->one()->div($this->pow(-$exponent));
+        }
+
+        $result = $this->one();
+        $factor = $this;
+        $remaining = $exponent;
+
+        while ($remaining > 0) {
+            if (($remaining & 1) === 1) {
+                $result = $result->mul($factor);
+            }
+
+            $remaining >>= 1;
+            if ($remaining > 0) {
+                $factor = $factor->mul($factor);
+            }
+        }
+
+        return $result;
+    }
+
+    public function sqrt(): self
+    {
+        if ($this->compare(0) < 0) {
+            throw new LogicException('Square root requires a non-negative real number.');
+        }
+
+        if ($this->compare(0) === 0) {
+            return $this;
+        }
+
+        $radicand = self::of($this->decimalValue());
+        $guess = self::of('1.0');
+        $two = self::of('2.0');
+
+        for ($iteration = 0; $iteration < 100; $iteration++) {
+            $next = $guess->add($radicand->div($guess))->div($two);
+            if ($next->value() === $guess->value()) {
+                return $next;
+            }
+            $guess = $next;
+        }
+
+        return $guess;
+    }
+
     public function value(): string
     {
         return $this->value->value();
@@ -157,5 +224,22 @@ final class Number implements NumericValue
     public function __toString(): string
     {
         return $this->value();
+    }
+
+    private function decimalValue(): string
+    {
+        if ($this->value instanceof Rational) {
+            return bcdiv(
+                (string) $this->value->numerator(),
+                (string) $this->value->denominator(),
+                60
+            );
+        }
+
+        if ($this->value instanceof Real) {
+            return $this->value->value();
+        }
+
+        throw new LogicException('Comparison requires a real numeric value.');
     }
 }

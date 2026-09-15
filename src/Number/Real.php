@@ -35,7 +35,7 @@ final class Real implements NumericValue
                     $this->normalize(
                         bcadd(
                             $this->number,
-                            $other->value(),
+                            $this->operandValue($other),
                             self::INTERNAL_SCALE
                         )
                     )
@@ -57,7 +57,7 @@ final class Real implements NumericValue
                     $this->normalize(
                         bcsub(
                             $this->number,
-                            $other->value(),
+                            $this->operandValue($other),
                             self::INTERNAL_SCALE
                         )
                     )
@@ -79,7 +79,7 @@ final class Real implements NumericValue
                     $this->normalize(
                         bcmul(
                             $this->number,
-                            $other->value(),
+                            $this->operandValue($other),
                             self::INTERNAL_SCALE
                         )
                     )
@@ -103,7 +103,9 @@ final class Real implements NumericValue
 
     private function divideReal(NumericValue $other): NumericValue
     {
-        if (bccomp($other->value(), '0', self::INTERNAL_SCALE) === 0) {
+        $otherValue = $this->operandValue($other);
+
+        if (bccomp($otherValue, '0', self::INTERNAL_SCALE) === 0) {
             throw new DivisionByZeroError();
         }
 
@@ -111,7 +113,7 @@ final class Real implements NumericValue
             $this->normalize(
                 bcdiv(
                     $this->number,
-                    $other->value(),
+                    $otherValue,
                     self::INTERNAL_SCALE
                 )
             )
@@ -121,6 +123,19 @@ final class Real implements NumericValue
     public function value(): string
     {
         return $this->number;
+    }
+
+    private function operandValue(NumericValue $other): string
+    {
+        if ($other instanceof Rational) {
+            return bcdiv(
+                (string) $other->numerator(),
+                (string) $other->denominator(),
+                self::INTERNAL_SCALE
+            );
+        }
+
+        return $other->value();
     }
 
     private function normalize(string $value): string
