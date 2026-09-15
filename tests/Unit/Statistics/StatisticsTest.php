@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Gauss\Tests\Statistics;
+namespace Gauss\Tests\Unit\Statistics;
 
 use DivisionByZeroError;
 use Gauss\Linear\Matrix;
