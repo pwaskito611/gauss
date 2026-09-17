@@ -44,6 +44,14 @@ final class Rational implements NumericValue
     public function add(NumericValue $other): NumericValue
     {
         if ($other instanceof self) {
+            if (
+                self::wouldOverflowMultiply($this->numerator, $other->denominator)
+                || self::wouldOverflowMultiply($other->numerator, $this->denominator)
+                || self::wouldOverflowMultiply($this->denominator, $other->denominator)
+            ) {
+                return (new Real($this->toDecimal()))->add(new Real($other->toDecimal()));
+            }
+
             return new self(
                 $this->numerator * $other->denominator
                     + $other->numerator * $this->denominator,
@@ -57,6 +65,14 @@ final class Rational implements NumericValue
     public function sub(NumericValue $other): NumericValue
     {
         if ($other instanceof self) {
+            if (
+                self::wouldOverflowMultiply($this->numerator, $other->denominator)
+                || self::wouldOverflowMultiply($other->numerator, $this->denominator)
+                || self::wouldOverflowMultiply($this->denominator, $other->denominator)
+            ) {
+                return (new Real($this->toDecimal()))->sub(new Real($other->toDecimal()));
+            }
+
             return new self(
                 $this->numerator * $other->denominator
                     - $other->numerator * $this->denominator,
@@ -70,6 +86,13 @@ final class Rational implements NumericValue
     public function mul(NumericValue $other): NumericValue
     {
         if ($other instanceof self) {
+            if (
+                self::wouldOverflowMultiply($this->numerator, $other->numerator)
+                || self::wouldOverflowMultiply($this->denominator, $other->denominator)
+            ) {
+                return (new Real($this->toDecimal()))->mul(new Real($other->toDecimal()));
+            }
+
             return new self(
                 $this->numerator * $other->numerator,
                 $this->denominator * $other->denominator
@@ -84,6 +107,13 @@ final class Rational implements NumericValue
         if ($other instanceof self) {
             if ($other->numerator === 0) {
                 throw new DivisionByZeroError();
+            }
+
+            if (
+                self::wouldOverflowMultiply($this->numerator, $other->denominator)
+                || self::wouldOverflowMultiply($this->denominator, $other->numerator)
+            ) {
+                return (new Real($this->toDecimal()))->div(new Real($other->toDecimal()));
             }
 
             return new self(
@@ -126,6 +156,17 @@ final class Rational implements NumericValue
             default =>
                 new Real($this->toDecimal()),
         };
+    }
+
+    private static function wouldOverflowMultiply(int $left, int $right): bool
+    {
+        if ($left === 0 || $right === 0) {
+            return false;
+        }
+
+        $limit = intdiv(PHP_INT_MAX, abs($right));
+
+        return abs($left) > $limit;
     }
 
     private function toDecimal(): string
