@@ -211,6 +211,59 @@ final class Number implements NumericValue
         return $guess;
     }
 
+    public function exp(): self
+    {
+        $x = $this->decimalValue();
+
+        if (bccomp($x, '0', 60) === 0) {
+            return self::of(1);
+        }
+
+        $squares = 0;
+        $reduced = $x;
+        $one = '1.000000000000000000000000000000000000000000000000000000000000';
+
+        while (bccomp($reduced, $one, 60) > 0 || bccomp($reduced, bcsub('0', $one, 60), 60) < 0) {
+            $reduced = bcdiv($reduced, '2', 60);
+            $squares++;
+        }
+
+        $result = self::of($this->taylorExp($reduced));
+
+        for ($i = 0; $i < $squares; $i++) {
+            $result = $result->mul($result);
+        }
+
+        return $result;
+    }
+
+    private function taylorExp(string $x): string
+    {
+        $scale = 60;
+        $term = '1';
+        $sum = '1';
+        $tolerance = '0.' . str_repeat('0', 59) . '1';
+
+        for ($n = 1; $n <= 400; $n++) {
+            $term = bcmul(
+                $term,
+                bcdiv($x, (string) $n, $scale),
+                $scale
+            );
+            $sum = bcadd($sum, $term, $scale);
+
+            if (bccomp($term, '0', $scale) >= 0) {
+                if (bccomp($term, $tolerance, $scale) < 0) {
+                    break;
+                }
+            } elseif (bccomp($term, bcsub('0', $tolerance, $scale), $scale) > 0) {
+                break;
+            }
+        }
+
+        return $sum;
+    }
+
     public function value(): string
     {
         return $this->value->value();

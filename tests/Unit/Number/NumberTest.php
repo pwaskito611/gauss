@@ -442,4 +442,42 @@ final class NumberTest extends TestCase
             (string) $number
         );
     }
+
+    public function testExpOfZero(): void
+    {
+        self::assertSame('1', Number::of(0)->exp()->value());
+    }
+
+    public function testExpOfOne(): void
+    {
+        self::assertSame(
+            0,
+            Number::of(1)->exp()->compare('2.71828182845904523536028747135266249775724709369995')
+        );
+    }
+
+    public function testExpOfNegativeOne(): void
+    {
+        self::assertSame(
+            0,
+            Number::of(-1)->exp()->compare('0.367879441171442321595523770161460867445811131031767834507837')
+        );
+    }
+
+    public function testExpOfFraction(): void
+    {
+        self::assertSame(
+            0,
+            Number::of('1/2')->exp()->compare('1.648721270700128146848650787814163571653776100710148011575060')
+        );
+    }
+
+    public function testExpIsDeterministic(): void
+    {
+        $first = Number::of(1)->exp();
+        $second = Number::of(1)->exp();
+
+        self::assertSame(0, $first->compare($second));
+        self::assertSame($first->value(), $second->value());
+    }
 }
