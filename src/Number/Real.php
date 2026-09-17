@@ -31,14 +31,9 @@ final class Real implements NumericValue
                 $other->add($this),
 
             default =>
-                new self(
-                    $this->normalize(
-                        bcadd(
-                            $this->number,
-                            $this->operandValue($other),
-                            self::INTERNAL_SCALE
-                        )
-                    )
+                $this->calculate(
+                    $this->operandValue($other),
+                    'add'
                 ),
         };
     }
@@ -53,14 +48,9 @@ final class Real implements NumericValue
                 (new Irrational($this->number))->sub($other),
 
             default =>
-                new self(
-                    $this->normalize(
-                        bcsub(
-                            $this->number,
-                            $this->operandValue($other),
-                            self::INTERNAL_SCALE
-                        )
-                    )
+                $this->calculate(
+                    $this->operandValue($other),
+                    'sub'
                 ),
         };
     }
@@ -75,14 +65,9 @@ final class Real implements NumericValue
                 $other->mul($this),
 
             default =>
-                new self(
-                    $this->normalize(
-                        bcmul(
-                            $this->number,
-                            $this->operandValue($other),
-                            self::INTERNAL_SCALE
-                        )
-                    )
+                $this->calculate(
+                    $this->operandValue($other),
+                    'mul'
                 ),
         };
     }
@@ -97,15 +82,57 @@ final class Real implements NumericValue
                 (new Irrational($this->number))->div($other),
 
             default =>
-                $this->divideReal($other),
+                $this->divideReal($this->operandValue($other)),
         };
     }
 
-    private function divideReal(NumericValue $other): NumericValue
+    public function value(): string
     {
-        $otherValue = $this->operandValue($other);
+        return $this->number;
+    }
 
-        if (bccomp($otherValue, '0', self::INTERNAL_SCALE) === 0) {
+    private function calculate(
+        string $other,
+        string $operation,
+    ): self {
+        $result = match ($operation) {
+            'add' => bcadd(
+                $this->number,
+                $other,
+                self::INTERNAL_SCALE
+            ),
+
+            'sub' => bcsub(
+                $this->number,
+                $other,
+                self::INTERNAL_SCALE
+            ),
+
+            'mul' => bcmul(
+                $this->number,
+                $other,
+                self::INTERNAL_SCALE
+            ),
+
+            default => throw new \LogicException(
+                "Unsupported real operation: {$operation}"
+            ),
+        };
+
+        return new self(
+            $this->normalize($result)
+        );
+    }
+
+    private function divideReal(string $other): self
+    {
+        if (
+            bccomp(
+                $other,
+                '0',
+                self::INTERNAL_SCALE
+            ) === 0
+        ) {
             throw new DivisionByZeroError();
         }
 
@@ -113,16 +140,11 @@ final class Real implements NumericValue
             $this->normalize(
                 bcdiv(
                     $this->number,
-                    $otherValue,
+                    $other,
                     self::INTERNAL_SCALE
                 )
             )
         );
-    }
-
-    public function value(): string
-    {
-        return $this->number;
     }
 
     private function operandValue(NumericValue $other): string
@@ -176,7 +198,10 @@ final class Real implements NumericValue
             );
         }
 
-        if ($negative && bccomp($result, '0', self::SCALE) !== 0) {
+        if (
+            $negative
+            && bccomp($result, '0', self::SCALE) !== 0
+        ) {
             $result = '-' . $result;
         }
 

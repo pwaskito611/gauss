@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Gauss\Number;
 
 use DivisionByZeroError;
+use LogicException;
 
 final class Complex implements NumericValue
 {
@@ -27,8 +28,20 @@ final class Complex implements NumericValue
         $other = self::complex($other);
 
         return new self(
-            bcadd($this->real, $other->real, self::SCALE),
-            bcadd($this->imaginary, $other->imaginary, self::SCALE)
+            self::finalize(
+                bcadd(
+                    $this->real,
+                    $other->real,
+                    self::INTERNAL_SCALE
+                )
+            ),
+            self::finalize(
+                bcadd(
+                    $this->imaginary,
+                    $other->imaginary,
+                    self::INTERNAL_SCALE
+                )
+            )
         );
     }
 
@@ -37,8 +50,20 @@ final class Complex implements NumericValue
         $other = self::complex($other);
 
         return new self(
-            bcsub($this->real, $other->real, self::SCALE),
-            bcsub($this->imaginary, $other->imaginary, self::SCALE)
+            self::finalize(
+                bcsub(
+                    $this->real,
+                    $other->real,
+                    self::INTERNAL_SCALE
+                )
+            ),
+            self::finalize(
+                bcsub(
+                    $this->imaginary,
+                    $other->imaginary,
+                    self::INTERNAL_SCALE
+                )
+            )
         );
     }
 
@@ -46,56 +71,127 @@ final class Complex implements NumericValue
     {
         $other = self::complex($other);
 
+        /*
+         * (a + bi)(c + di)
+         *
+         * real      = ac - bd
+         * imaginary = ad + bc
+         */
         $real = bcsub(
-            bcmul($this->real, $other->real, self::SCALE),
-            bcmul($this->imaginary, $other->imaginary, self::SCALE),
-            self::SCALE
+            bcmul(
+                $this->real,
+                $other->real,
+                self::INTERNAL_SCALE
+            ),
+            bcmul(
+                $this->imaginary,
+                $other->imaginary,
+                self::INTERNAL_SCALE
+            ),
+            self::INTERNAL_SCALE
         );
 
         $imaginary = bcadd(
-            bcmul($this->real, $other->imaginary, self::SCALE),
-            bcmul($this->imaginary, $other->real, self::SCALE),
-            self::SCALE
+            bcmul(
+                $this->real,
+                $other->imaginary,
+                self::INTERNAL_SCALE
+            ),
+            bcmul(
+                $this->imaginary,
+                $other->real,
+                self::INTERNAL_SCALE
+            ),
+            self::INTERNAL_SCALE
         );
 
-        return new self($real, $imaginary);
+        return new self(
+            self::finalize($real),
+            self::finalize($imaginary)
+        );
     }
 
     public function div(NumericValue $other): NumericValue
     {
         $other = self::complex($other);
 
+        /*
+         * |c + di|² = c² + d²
+         */
         $denominator = bcadd(
-            bcmul($other->real, $other->real, self::SCALE),
-            bcmul($other->imaginary, $other->imaginary, self::SCALE),
-            self::SCALE
+            bcmul(
+                $other->real,
+                $other->real,
+                self::INTERNAL_SCALE
+            ),
+            bcmul(
+                $other->imaginary,
+                $other->imaginary,
+                self::INTERNAL_SCALE
+            ),
+            self::INTERNAL_SCALE
         );
 
-        if (bccomp($denominator, '0', self::SCALE) === 0) {
+        if (
+            bccomp(
+                $denominator,
+                '0',
+                self::INTERNAL_SCALE
+            ) === 0
+        ) {
             throw new DivisionByZeroError();
         }
 
-        $real = bcdiv(
-            bcadd(
-                bcmul($this->real, $other->real, self::SCALE),
-                bcmul($this->imaginary, $other->imaginary, self::SCALE),
-                self::SCALE
+        /*
+         * (a + bi) / (c + di)
+         *
+         * real      = (ac + bd) / (c² + d²)
+         * imaginary = (bc - ad) / (c² + d²)
+         */
+        $realNumerator = bcadd(
+            bcmul(
+                $this->real,
+                $other->real,
+                self::INTERNAL_SCALE
             ),
-            $denominator,
-            self::SCALE
+            bcmul(
+                $this->imaginary,
+                $other->imaginary,
+                self::INTERNAL_SCALE
+            ),
+            self::INTERNAL_SCALE
         );
 
-        $imaginary = bcdiv(
-            bcsub(
-                bcmul($this->imaginary, $other->real, self::SCALE),
-                bcmul($this->real, $other->imaginary, self::SCALE),
-                self::SCALE
+        $imaginaryNumerator = bcsub(
+            bcmul(
+                $this->imaginary,
+                $other->real,
+                self::INTERNAL_SCALE
             ),
-            $denominator,
-            self::SCALE
+            bcmul(
+                $this->real,
+                $other->imaginary,
+                self::INTERNAL_SCALE
+            ),
+            self::INTERNAL_SCALE
         );
 
-        return new self($real, $imaginary);
+        return new self(
+            self::finalize(
+                bcdiv(
+                    $realNumerator,
+                    $denominator,
+                    self::INTERNAL_SCALE
+                )
+            ),
+            self::finalize(
+                bcdiv(
+                    $imaginaryNumerator,
+                    $denominator,
+                    self::INTERNAL_SCALE
+                )
+            )
+        );
     }
 
     public function value(): string
@@ -134,15 +230,34 @@ final class Complex implements NumericValue
             );
         }
 
-        return new self($value->value(), '0');
+        if ($value instanceof Irrational) {
+            throw new LogicException(
+                'Complex and Irrational arithmetic is not supported.'
+            );
+        }
+
+        return new self(
+            $value->value(),
+            '0'
+        );
     }
 
-    private static function rationalToDecimal(Rational $rational): string
-    {
+    private static function rationalToDecimal(
+        Rational $rational
+    ): string {
         return bcdiv(
             (string) $rational->numerator(),
             (string) $rational->denominator(),
             self::INTERNAL_SCALE
+        );
+    }
+
+    private static function finalize(string $value): string
+    {
+        return bcadd(
+            $value,
+            '0',
+            self::SCALE
         );
     }
 }
