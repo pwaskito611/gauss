@@ -175,7 +175,7 @@ final class Polynomial
         $leading = $this->leadingCoefficient();
         $one     = $leading->div($leading);
 
-        return $leading->value() === $one->value();
+        return $leading->compare($one) === 0;
     }
 
     // ------------------------------------------------------------------
