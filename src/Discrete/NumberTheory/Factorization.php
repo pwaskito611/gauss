@@ -36,7 +36,11 @@ final class Factorization
         }
 
         if ($n->compare(Number::of(0)) === 0) {
-            return new self([Number::of(0)], [Number::of(1)]);
+            throw new InvalidArgumentException('Factorization is undefined for zero.');
+        }
+
+        if ($n->compare(Number::of(1)) === 0) {
+            return new self([], []);
         }
 
         $remaining = $n;
@@ -44,7 +48,7 @@ final class Factorization
         $exponents = [];
         $divisor = Number::of(2);
 
-        while ($remaining->compare(Number::of(1)) > 0) {
+        while ($remaining->compare(Number::of(1)) > 0 && $divisor->mul($divisor)->compare($remaining) <= 0) {
             $count = Number::of(0);
             while (Divisibility::isDivisibleBy($remaining, $divisor)) {
                 $remaining = $remaining->div($divisor);
@@ -57,6 +61,11 @@ final class Factorization
             }
 
             $divisor = $divisor->add(1);
+        }
+
+        if ($remaining->compare(Number::of(1)) > 0) {
+            $factors[] = $remaining;
+            $exponents[] = Number::of(1);
         }
 
         return new self($factors, $exponents);

@@ -50,6 +50,14 @@ final class Recurrence
             throw new InvalidArgumentException('Sequence index must be at least 1.');
         }
 
+        if (count($this->initialValues) < 2) {
+            throw new InvalidArgumentException('Recurrence requires at least two initial values.');
+        }
+
+        if ($n->compare(Number::of(count($this->initialValues))) <= 0) {
+            return $this->initialValues[(int) $n->value() - 1];
+        }
+
         $values = $this->initialValues;
         $index = Number::of(count($values));
         while ($index->compare($n) < 0) {

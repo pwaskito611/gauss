@@ -55,6 +55,32 @@ final class Set
         return count($this->values);
     }
 
+    public function equals(self $other): bool
+    {
+        return $this->subsetOf($other) && $other->subsetOf($this);
+    }
+
+    public function isSubsetOf(self $other): bool
+    {
+        return $this->subsetOf($other);
+    }
+
+    public function isProperSubsetOf(self $other): bool
+    {
+        return $this->subsetOf($other) && ! $this->equals($other);
+    }
+
+    public function isDisjointFrom(self $other): bool
+    {
+        foreach ($this->values as $value) {
+            if ($other->contains($value)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public function union(self $other): self
     {
         $merged = $this->values;
@@ -89,5 +115,16 @@ final class Set
         }
 
         return new self($values);
+    }
+
+    private function subsetOf(self $other): bool
+    {
+        foreach ($this->values as $value) {
+            if (! $other->contains($value)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

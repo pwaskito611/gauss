@@ -32,25 +32,41 @@ final class Divisibility
         }
 
         $quotient = self::quotient($a, $b);
-        return $a->sub($quotient->mul($b));
-    }
+        $remainder = $a->sub($quotient->mul($b));
 
-    private static function quotient(Number $a, Number $b): Number
-    {
-        $leftValue = $a->value();
-        $rightValue = $b->value();
-
-        $leftAbs = ltrim($leftValue, '-');
-        $rightAbs = ltrim($rightValue, '-');
-
-        $quotient = bcdiv($leftAbs, $rightAbs, 0);
-        $negative = (($leftValue[0] ?? '+') === '-' xor ($rightValue[0] ?? '+') === '-');
-
-        if ($negative) {
-            $quotient = '-' . ltrim($quotient, '-');
+        if ($remainder->compare(Number::of(0)) < 0) {
+            $adjustment = $b->compare(Number::of(0)) < 0 ? Number::of(1) : Number::of(-1);
+            $quotient = $quotient->add($adjustment);
+            $remainder = $a->sub($quotient->mul($b));
         }
 
-        return Number::of($quotient);
+        return $remainder;
+    }
+
+    public static function quotient(Number $a, Number $b): Number
+    {
+        self::assertInteger($a);
+        self::assertInteger($b);
+
+        if ($b->compare(Number::of(0)) === 0) {
+            throw new DivisionByZeroError('Division by zero is undefined.');
+        }
+
+        $leftAbs = ltrim($a->abs()->value(), '-');
+        $rightAbs = ltrim($b->abs()->value(), '-');
+        $truncated = Number::of(bcdiv($leftAbs, $rightAbs, 0));
+
+        $quotient = $a->compare(Number::of(0)) >= 0
+            ? ($b->compare(Number::of(0)) >= 0 ? $truncated : $truncated->mul(Number::of(-1)))
+            : ($b->compare(Number::of(0)) >= 0 ? $truncated->mul(Number::of(-1)) : $truncated);
+
+        $remainder = $a->sub($quotient->mul($b));
+        if ($remainder->compare(Number::of(0)) < 0) {
+            $adjustment = $b->compare(Number::of(0)) < 0 ? Number::of(1) : Number::of(-1);
+            $quotient = $quotient->add($adjustment);
+        }
+
+        return $quotient;
     }
 
     private static function assertInteger(Number $value): void

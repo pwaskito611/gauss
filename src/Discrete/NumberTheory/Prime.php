@@ -11,9 +11,7 @@ final class Prime
 {
     public static function isPrime(Number $n): bool
     {
-        if (! preg_match('/^-?\d+$/', $n->value())) {
-            throw new InvalidArgumentException('Prime test requires an integer value.');
-        }
+        self::assertInteger($n);
 
         if ($n->compare(Number::of(2)) < 0) {
             return false;
@@ -27,7 +25,7 @@ final class Prime
             return false;
         }
 
-        $limit = Number::of((int) floor(sqrt((float) $n->value())));
+        $limit = IntegerSquareRoot::of($n);
         for ($candidate = Number::of(3); $candidate->compare($limit) <= 0; $candidate = $candidate->add(2)) {
             if ($n->mod($candidate)->compare(Number::of(0)) === 0) {
                 return false;
@@ -35,5 +33,36 @@ final class Prime
         }
 
         return true;
+    }
+
+    public static function nextPrime(Number $n): Number
+    {
+        self::assertInteger($n);
+
+        if ($n->compare(Number::of(2)) < 0) {
+            return Number::of(2);
+        }
+
+        $candidate = $n->compare(Number::of(2)) === 0 ? Number::of(2) : $n;
+        if ($candidate->compare(Number::of(2)) === 0) {
+            return Number::of(2);
+        }
+
+        if ($candidate->mod(2)->compare(Number::of(0)) === 0) {
+            $candidate = $candidate->add(1);
+        }
+
+        while (! self::isPrime($candidate)) {
+            $candidate = $candidate->add(2);
+        }
+
+        return $candidate;
+    }
+
+    private static function assertInteger(Number $value): void
+    {
+        if (! preg_match('/^-?\d+$/', $value->value())) {
+            throw new InvalidArgumentException('Prime test requires an integer value.');
+        }
     }
 }

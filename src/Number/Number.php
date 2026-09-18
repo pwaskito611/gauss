@@ -157,8 +157,15 @@ final class Number implements NumericValue
         }
 
         $quotient = self::integerQuotient($this, $divisor);
+        $remainder = $this->sub($quotient->mul($divisor));
 
-        return $this->sub($quotient->mul($divisor));
+        if ($remainder->compare(0) < 0) {
+            $direction = $divisor->compare(0) < 0 ? Number::of(1) : Number::of(-1);
+            $quotient = $quotient->add($direction);
+            $remainder = $this->sub($quotient->mul($divisor));
+        }
+
+        return $remainder;
     }
 
     public function compare(int|float|string|NumericValue $other): int
@@ -321,7 +328,7 @@ final class Number implements NumericValue
         $rightAbs = ltrim($rightValue, '-');
 
         $quotient = bcdiv($leftAbs, $rightAbs, 0);
-        $sign = (($leftValue[0] ?? '+') === '-' xor ($rightValue[0] ?? '+') === '-')
+        $sign = (str_starts_with($leftValue, '-') xor str_starts_with($rightValue, '-'))
             ? '-' : '';
 
         if ($leftValue === '0' || $quotient === '0') {
