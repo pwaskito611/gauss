@@ -145,6 +145,22 @@ final class Number implements NumericValue
         );
     }
 
+    public function mod(int|float|string|NumericValue $other): self
+    {
+        $divisor = self::of($other);
+        if ($divisor->compare(0) === 0) {
+            throw new DivisionByZeroError('Division by zero is undefined.');
+        }
+
+        if (! preg_match('/^-?\d+$/', $this->value()) || ! preg_match('/^-?\d+$/', $divisor->value())) {
+            throw new InvalidArgumentException('Modulo requires integer values.');
+        }
+
+        $quotient = self::integerQuotient($this, $divisor);
+
+        return $this->sub($quotient->mul($divisor));
+    }
+
     public function compare(int|float|string|NumericValue $other): int
     {
         $left = $this->decimalValue();
@@ -294,5 +310,24 @@ final class Number implements NumericValue
         }
 
         throw new LogicException('Comparison requires a real numeric value.');
+    }
+
+    private static function integerQuotient(self $left, self $right): self
+    {
+        $leftValue = $left->value();
+        $rightValue = $right->value();
+
+        $leftAbs = ltrim($leftValue, '-');
+        $rightAbs = ltrim($rightValue, '-');
+
+        $quotient = bcdiv($leftAbs, $rightAbs, 0);
+        $sign = (($leftValue[0] ?? '+') === '-' xor ($rightValue[0] ?? '+') === '-')
+            ? '-' : '';
+
+        if ($leftValue === '0' || $quotient === '0') {
+            return self::of(0);
+        }
+
+        return self::of($sign . $quotient);
     }
 }
