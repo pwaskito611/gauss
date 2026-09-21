@@ -4,480 +4,199 @@ declare(strict_types=1);
 
 namespace Gauss\Tests\Unit\Number;
 
-use Gauss\Number\Complex;
-use Gauss\Number\Irrational;
+use DivisionByZeroError;
 use Gauss\Number\Number;
-use Gauss\Number\Rational;
-use Gauss\Number\Real;
 use InvalidArgumentException;
+use LogicException;
 use PHPUnit\Framework\TestCase;
 
 final class NumberTest extends TestCase
 {
-    public function testOfIntegerCreatesRational(): void
+    public function testConstants(): void
     {
-        $number = Number::of(5);
-
         self::assertSame(
-            Rational::class,
-            $number->type()
+            '3.14159265358979323846264338327950288419716939937511',
+            Number::pi()->value()
         );
 
-        self::assertSame('5', $number->value());
-    }
-
-    public function testOfNegativeIntegerCreatesRational(): void
-    {
-        $number = Number::of(-5);
-
         self::assertSame(
-            Rational::class,
-            $number->type()
+            '2.71828182845904523536028747135266249775724709369996',
+            Number::e()->value()
         );
-
-        self::assertSame('-5', $number->value());
     }
 
-    public function testOfFloatCreatesReal(): void
+    public function testOf(): void
     {
-        $number = Number::of(2.5);
+        self::assertSame('123', Number::of(123)->value());
+        self::assertSame('1.5', Number::of(1.5)->value());
+        self::assertSame('1.23', Number::of('001.2300')->value());
 
-        self::assertSame(
-            Real::class,
-            $number->type()
-        );
-
-        self::assertSame('2.5', $number->value());
+        $number = Number::of('1.23');
+        self::assertSame($number, Number::of($number));
     }
 
-    public function testOfNumericValueReturnsWrappedValue(): void
-    {
-        $rational = new Rational(1, 2);
-
-        $number = Number::of($rational);
-
-        self::assertSame(
-            Rational::class,
-            $number->type()
-        );
-
-        self::assertSame('1/2', $number->value());
-    }
-
-    public function testParseRational(): void
-    {
-        $number = Number::of('1/2');
-
-        self::assertSame(
-            Rational::class,
-            $number->type()
-        );
-
-        self::assertSame('1/2', $number->value());
-    }
-
-    public function testParseNegativeRational(): void
-    {
-        $number = Number::of('-3/4');
-
-        self::assertSame(
-            Rational::class,
-            $number->type()
-        );
-
-        self::assertSame('-3/4', $number->value());
-    }
-
-    public function testParseRationalWithPositiveSigns(): void
-    {
-        $number = Number::of('+3/+4');
-
-        self::assertSame(
-            Rational::class,
-            $number->type()
-        );
-
-        self::assertSame('3/4', $number->value());
-    }
-
-    public function testParseIntegerString(): void
-    {
-        $number = Number::of('42');
-
-        self::assertSame(
-            Rational::class,
-            $number->type()
-        );
-
-        self::assertSame('42', $number->value());
-    }
-
-    public function testParseNegativeIntegerString(): void
-    {
-        $number = Number::of('-42');
-
-        self::assertSame(
-            Rational::class,
-            $number->type()
-        );
-
-        self::assertSame('-42', $number->value());
-    }
-
-    public function testParseDecimal(): void
-    {
-        $number = Number::of('2.5');
-
-        self::assertSame(
-            Real::class,
-            $number->type()
-        );
-
-        self::assertSame('2.5', $number->value());
-    }
-
-    public function testParseNegativeDecimal(): void
-    {
-        $number = Number::of('-2.5');
-
-        self::assertSame(
-            Real::class,
-            $number->type()
-        );
-
-        self::assertSame('-2.5', $number->value());
-    }
-
-    public function testParseComplex(): void
-    {
-        $number = Number::of('2+3i');
-
-        self::assertSame(
-            Complex::class,
-            $number->type()
-        );
-
-        self::assertSame('2+3i', $number->value());
-    }
-
-    public function testParseComplexWithNegativeImaginary(): void
-    {
-        $number = Number::of('2-3i');
-
-        self::assertSame(
-            Complex::class,
-            $number->type()
-        );
-
-        self::assertSame('2-3i', $number->value());
-    }
-
-    public function testParseNegativeComplex(): void
-    {
-        $number = Number::of('-2+4i');
-
-        self::assertSame(
-            Complex::class,
-            $number->type()
-        );
-
-        self::assertSame('-2+4i', $number->value());
-    }
-
-    public function testParseDecimalComplex(): void
-    {
-        $number = Number::of('2.5+3.5i');
-
-        self::assertSame(
-            Complex::class,
-            $number->type()
-        );
-
-        self::assertSame('2.5+3.5i', $number->value());
-    }
-
-    public function testParsePiAsIrrational(): void
-    {
-        $number = Number::of('pi');
-
-        self::assertSame(
-            Irrational::class,
-            $number->type()
-        );
-
-        self::assertSame('pi', $number->value());
-    }
-
-    public function testParseEAsIrrational(): void
-    {
-        $number = Number::of('e');
-
-        self::assertSame(
-            Irrational::class,
-            $number->type()
-        );
-
-        self::assertSame('e', $number->value());
-    }
-
-    public function testParseSqrtExpressionAsIrrational(): void
-    {
-        $number = Number::of('sqrt(2)');
-
-        self::assertSame(
-            Irrational::class,
-            $number->type()
-        );
-
-        self::assertSame('sqrt(2)', $number->value());
-    }
-
-    public function testParseTrimsWhitespace(): void
-    {
-        $number = Number::of('  1/2  ');
-
-        self::assertSame(
-            Rational::class,
-            $number->type()
-        );
-
-        self::assertSame('1/2', $number->value());
-    }
-
-    public function testInvalidStringThrowsException(): void
+    public function testOfRejectsInvalidString(): void
     {
         $this->expectException(InvalidArgumentException::class);
-
-        Number::of('hello');
+        Number::of('abc');
     }
 
-    public function testInvalidExpressionThrowsException(): void
+    public function testOfRejectsInfinity(): void
     {
         $this->expectException(InvalidArgumentException::class);
-
-        Number::of('2x+3');
+        Number::of(INF);
     }
 
-    public function testAdd(): void
+    public function testOne(): void
     {
-        $result = Number::of(1)
-            ->add(2);
-
-        self::assertSame(
-            Rational::class,
-            $result->type()
-        );
-
-        self::assertSame('3', $result->value());
+        self::assertSame('1', Number::of(5)->one()->value());
     }
 
-    public function testSubtract(): void
+    public function testAddSubMul(): void
     {
-        $result = Number::of(5)
-            ->sub(2);
+        self::assertSame('0.3', Number::of('0.1')->add('0.2')->value());
+        self::assertSame('5.73', Number::of('1.23')->add('4.5')->value());
 
-        self::assertSame(
-            Rational::class,
-            $result->type()
-        );
+        self::assertSame('0.001', Number::of('1')->sub('0.999')->value());
 
-        self::assertSame('3', $result->value());
+        self::assertSame('0.02', Number::of('0.1')->mul('0.2')->value());
+        self::assertSame('3', Number::of('1.5')->mul(2)->value());
     }
 
-    public function testMultiply(): void
+    public function testDiv(): void
     {
-        $result = Number::of(3)
-            ->mul(4);
-
+        self::assertSame('0.5', Number::of(1)->div(2)->value());
+        self::assertSame('0.125', Number::of(1)->div(8)->value());
         self::assertSame(
-            Rational::class,
-            $result->type()
+            '0.' . str_repeat('3', 60),
+            Number::of(1)->div(3)->value()
         );
-
-        self::assertSame('12', $result->value());
     }
 
-    public function testDivide(): void
+    public function testDivByZero(): void
     {
-        $result = Number::of(1)
-            ->div(2);
-
-        self::assertSame(
-            Rational::class,
-            $result->type()
-        );
-
-        self::assertSame('1/2', $result->value());
+        $this->expectException(DivisionByZeroError::class);
+        Number::of(1)->div(0);
     }
 
-    public function testAddStringRational(): void
+    public function testDivVerySmall(): void
     {
-        $result = Number::of('1/2')
-            ->add('1/2');
+        $expected = '0.' . str_repeat('0', 99) . '1';
 
-        self::assertSame(
-            Rational::class,
-            $result->type()
-        );
-
-        self::assertSame('1', $result->value());
+        self::assertSame($expected, Number::of(1)->div('1e100')->value());
     }
 
-    public function testMultiplyStringRational(): void
+    public function testMod(): void
     {
-        $result = Number::of('2/3')
-            ->mul('3/4');
-
-        self::assertSame(
-            Rational::class,
-            $result->type()
-        );
-
-        self::assertSame('1/2', $result->value());
+        self::assertSame('1', Number::of(10)->mod(3)->value());
+        self::assertSame('2', Number::of(-10)->mod(3)->value());
+        self::assertSame('1', Number::of(10)->mod(-3)->value());
+        self::assertSame('2', Number::of(-10)->mod(-3)->value());
     }
 
-    public function testAddReal(): void
+    public function testModRejectsNonInteger(): void
     {
-        $result = Number::of('0.5')
-            ->add('0.5');
-
-        self::assertSame(
-            Real::class,
-            $result->type()
-        );
-
-        self::assertSame(
-            '1.00000000000000000000000000000000000000000000000000',
-            $result->value()
-        );
+        $this->expectException(InvalidArgumentException::class);
+        Number::of('1.5')->mod(1);
     }
 
-    public function testDecimalSubtractionUsesNumberPrecision(): void
+    public function testModByZero(): void
     {
-        $result = Number::of('0.2')->sub(Number::of('0.1'));
-
-        self::assertSame(Real::class, $result->type());
-        self::assertSame(
-            '0.10000000000000000000000000000000000000000000000000',
-            $result->value()
-        );
+        $this->expectException(DivisionByZeroError::class);
+        Number::of(1)->mod(0);
     }
 
-    public function testDecimalAdditionUsesNumberPrecision(): void
+    public function testCompare(): void
     {
-        $result = Number::of('0.1')->add(Number::of('0.2'));
-
-        self::assertSame(
-            '0.30000000000000000000000000000000000000000000000000',
-            $result->value()
-        );
+        self::assertSame(0, Number::of('1.0')->compare('1'));
+        self::assertSame(1, Number::of(2)->compare(1));
+        self::assertSame(-1, Number::of(1)->compare(2));
+        self::assertSame(1, Number::of('1e-100')->compare('0'));
     }
 
-    public function testDecimalSubtractionChainUsesNumberPrecision(): void
+    public function testAbs(): void
     {
-        $result = Number::of('0.3')->sub(Number::of('0.2'));
+        self::assertSame('1.23', Number::of('-1.23')->abs()->value());
 
-        self::assertSame(
-            '0.10000000000000000000000000000000000000000000000000',
-            $result->value()
-        );
+        $number = Number::of('1.23');
+        self::assertSame($number, $number->abs());
     }
 
-    public function testRepeatedDecimalOperationsDoNotAccumulateBinaryFloatError(): void
+    public function testPow(): void
     {
-        $result = Number::of('0.0');
-
-        for ($i = 0; $i < 10; $i++) {
-            $result = $result->add(Number::of('0.1'));
-        }
-
-        self::assertSame(
-            '1.00000000000000000000000000000000000000000000000000',
-            $result->value()
-        );
+        self::assertSame('1024', Number::of(2)->pow(10)->value());
+        self::assertSame('1', Number::of(2)->pow(0)->value());
+        self::assertSame('0.25', Number::of(2)->pow(-2)->value());
+        self::assertSame('2.25', Number::of('1.5')->pow(2)->value());
     }
 
-    public function testComplexArithmetic(): void
+    public function testPowRejectsOutOfRangeExponent(): void
     {
-        $result = Number::of('2+3i')
-            ->add('1+2i');
-
-        self::assertSame(
-            Complex::class,
-            $result->type()
-        );
-
-        self::assertSame(
-            '3.00000000000000000000000000000000000000000000000000+5.00000000000000000000000000000000000000000000000000i',
-            $result->value()
-        );
+        $this->expectException(InvalidArgumentException::class);
+        Number::of(2)->pow(10001);
     }
 
-    public function testValueReturnsUnderlyingValue(): void
+    public function testSqrt(): void
     {
-        $number = Number::of('1/2');
+        self::assertSame('2', Number::of(4)->sqrt()->value());
 
         self::assertSame(
-            '1/2',
-            $number->value()
+            '1.41421356237309504880168872420969807856967187537695',
+            Number::of(2)->sqrt()->value()
         );
+
+        self::assertSame('0', Number::of(0)->sqrt()->value());
     }
 
-    public function testTypeReturnsUnderlyingClass(): void
+    public function testSqrtRejectsNegative(): void
     {
-        $number = Number::of('sqrt(2)');
-
-        self::assertSame(
-            Irrational::class,
-            $number->type()
-        );
+        $this->expectException(LogicException::class);
+        Number::of(-1)->sqrt();
     }
 
-    public function testToStringReturnsValue(): void
-    {
-        $number = Number::of('1/2');
-
-        self::assertSame(
-            '1/2',
-            (string) $number
-        );
-    }
-
-    public function testExpOfZero(): void
+    public function testExp(): void
     {
         self::assertSame('1', Number::of(0)->exp()->value());
-    }
+        self::assertSame(Number::e()->value(), Number::of(1)->exp()->value());
 
-    public function testExpOfOne(): void
-    {
-        self::assertSame(
-            0,
-            Number::of(1)->exp()->compare('2.71828182845904523536028747135266249775724709369995')
+        $expNeg1 = Number::of(-1)->exp();
+
+        self::assertStringStartsWith(
+            '0.367879441171442321595523770161460867445811131031',
+            $expNeg1->value()
         );
+
+        self::assertSame(1, $expNeg1->compare(0));
+        self::assertSame(-1, $expNeg1->compare(1));
     }
 
-    public function testExpOfNegativeOne(): void
+    public function testExpRejectsOutOfRangeArgument(): void
     {
-        self::assertSame(
-            0,
-            Number::of(-1)->exp()->compare('0.367879441171442321595523770161460867445811131031767834507837')
-        );
+        $this->expectException(InvalidArgumentException::class);
+        Number::of(10001)->exp();
     }
 
-    public function testExpOfFraction(): void
+    public function testExpRejectsNegativeOutOfRangeArgument(): void
     {
-        self::assertSame(
-            0,
-            Number::of('1/2')->exp()->compare('1.648721270700128146848650787814163571653776100710148011575060')
-        );
+        $this->expectException(InvalidArgumentException::class);
+        Number::of(-10001)->exp();
     }
 
-    public function testExpIsDeterministic(): void
+    public function testTypeAndStringRepresentation(): void
     {
-        $first = Number::of(1)->exp();
-        $second = Number::of(1)->exp();
+        $integer = Number::of('123');
+        self::assertSame('integer', $integer->type());
+        self::assertTrue($integer->isIntegerLike());
+        self::assertFalse($integer->isDecimalLike());
 
-        self::assertSame(0, $first->compare($second));
-        self::assertSame($first->value(), $second->value());
+        $decimal = Number::of('123.45');
+        self::assertSame('decimal', $decimal->type());
+        self::assertFalse($decimal->isIntegerLike());
+        self::assertTrue($decimal->isDecimalLike());
+        self::assertSame('123.45', (string) $decimal);
+
+        $normalized = Number::of('123.00');
+        self::assertSame('123', $normalized->value());
+        self::assertSame('integer', $normalized->type());
     }
 }

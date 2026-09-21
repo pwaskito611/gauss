@@ -36,12 +36,12 @@ final class Circle
 
     public function area(): NumericValue
     {
-        return $this->radius->pow(2)->mul(Number::of(M_PI));
+        return $this->radius->pow(2)->mul(Number::pi());
     }
 
     public function circumference(): NumericValue
     {
-        return $this->radius->mul(2)->mul(Number::of(M_PI));
+        return $this->radius->mul(2)->mul(Number::pi());
     }
 
     public function contains(Point $point): bool
