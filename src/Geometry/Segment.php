@@ -6,7 +6,6 @@ namespace Gauss\Geometry;
 
 use Gauss\Linear\Vector;
 use Gauss\Number\Number;
-use Gauss\Number\NumericValue;
 
 final class Segment
 {
@@ -31,7 +30,7 @@ final class Segment
         return $this->end;
     }
 
-    public function length(): NumericValue
+    public function length(): Number
     {
         return $this->start->distanceTo($this->end);
     }

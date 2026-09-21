@@ -180,6 +180,11 @@ final class Number
         return $this;
     }
 
+    public function round(int $scale): self
+    {
+        return new self(Decimal::normalize(Decimal::round($this->value, $scale)));
+    }
+
     public function pow(int $exponent): self
     {
         if (

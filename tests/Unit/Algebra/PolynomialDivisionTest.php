@@ -78,7 +78,7 @@ final class PolynomialDivisionTest extends TestCase
         $division = $dividend->divide($divisor);
 
         self::assertSame(
-            '1.00000000000000000000000000000000000000000000000000',
+            '1',
             $division->quotient()->constantTerm()->value()
         );
         self::assertTrue($division->remainder()->isZero());

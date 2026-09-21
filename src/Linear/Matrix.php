@@ -6,21 +6,20 @@ namespace Gauss\Linear;
 
 use DivisionByZeroError;
 use Gauss\Number\Number;
-use Gauss\Number\NumericValue;
 use InvalidArgumentException;
 use LogicException;
 
-/** Immutable rectangular matrix over NumericValue. */
+/** Immutable rectangular matrix over Number. */
 final class Matrix
 {
-    /** @var list<list<NumericValue>> */
+    /** @var list<list<Number>> */
     private readonly array $values;
     private readonly int $rowCount;
     private readonly int $columnCount;
-    private readonly NumericValue $zero;
+    private readonly Number $zero;
 
-    /** @param list<list<NumericValue>> $values */
-    private function __construct(array $values, NumericValue $zero)
+    /** @param list<list<Number>> $values */
+    private function __construct(array $values, Number $zero)
     {
         if ($values === [] || $values[0] === []) {
             throw new InvalidArgumentException('Matrix must contain at least one column and row.');
@@ -32,8 +31,8 @@ final class Matrix
                 throw new InvalidArgumentException('Matrix rows must have equal length.');
             }
             foreach ($row as $value) {
-                if (! $value instanceof NumericValue) {
-                    throw new InvalidArgumentException('Matrix values must be NumericValue instances.');
+                if (! $value instanceof Number) {
+                    throw new InvalidArgumentException('Matrix values must be Number instances.');
                 }
             }
         }
@@ -44,7 +43,7 @@ final class Matrix
         $this->zero = $zero;
     }
 
-    /** @param array<array<int|float|string|NumericValue>> $rows */
+    /** @param array<array<int|float|string|Number>> $rows */
     public static function of(array $rows): self
     {
         if ($rows === [] || $rows[0] === []) {
@@ -54,7 +53,7 @@ final class Matrix
         $converted = [];
         foreach ($rows as $row) {
             $converted[] = array_map(
-                static fn (int|float|string|NumericValue $value): NumericValue => Number::of($value),
+                static fn (int|float|string|Number $value): Number => Number::of($value),
                 $row
             );
         }
@@ -88,7 +87,7 @@ final class Matrix
         return self::of($rows);
     }
 
-    /** @param array<int|float|string|NumericValue> $diagonal */
+    /** @param array<int|float|string|Number> $diagonal */
     public static function diagonal(array $diagonal): self
     {
         if ($diagonal === []) {
@@ -122,7 +121,7 @@ final class Matrix
         return [$this->rowCount, $this->columnCount];
     }
 
-    public function get(int $row, int $column): NumericValue
+    public function get(int $row, int $column): Number
     {
         $this->assertIndex($row, $column);
         return $this->values[$row][$column];
@@ -207,11 +206,11 @@ final class Matrix
         return new self($rows, $this->zero);
     }
 
-    public function scale(NumericValue $scalar): self
+    public function scale(Number $scalar): self
     {
         $rows = [];
         foreach ($this->values as $row) {
-            $rows[] = array_map(static fn (NumericValue $value): NumericValue => $value->mul($scalar), $row);
+            $rows[] = array_map(static fn (Number $value): Number => $value->mul($scalar), $row);
         }
         return new self($rows, $this->zero);
     }
@@ -261,7 +260,7 @@ final class Matrix
         return Vector::of(...$values);
     }
 
-    public function trace(): NumericValue
+    public function trace(): Number
     {
         if (! $this->isSquare()) {
             throw new LogicException('Trace requires a square matrix.');
@@ -274,7 +273,7 @@ final class Matrix
         return $result;
     }
 
-    public function determinant(): NumericValue
+    public function determinant(): Number
     {
         if (! $this->isSquare()) {
             throw new LogicException('Determinant requires a square matrix.');
@@ -310,14 +309,14 @@ final class Matrix
             }
             $rows[] = array_values(array_filter(
                 $values,
-                static fn (NumericValue $value, int $index): bool => $index !== $column,
+                static fn (Number $value, int $index): bool => $index !== $column,
                 ARRAY_FILTER_USE_BOTH
             ));
         }
         return new self($rows, $this->zero);
     }
 
-    public function cofactor(int $row, int $column): NumericValue
+    public function cofactor(int $row, int $column): Number
     {
         $minor = $this->minor($row, $column)->determinant();
         return (($row + $column) % 2 === 0) ? $minor : $this->zero->sub($minor);
@@ -434,7 +433,7 @@ final class Matrix
         if ($this->shape() !== $other->shape()) throw new InvalidArgumentException('Matrix shapes must match.');
     }
 
-    private function isZeroValue(NumericValue $value): bool
+    private function isZeroValue(Number $value): bool
     {
         return $value->value() === $value->sub($value)->value();
     }

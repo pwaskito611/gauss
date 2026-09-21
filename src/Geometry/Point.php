@@ -6,7 +6,6 @@ namespace Gauss\Geometry;
 
 use Gauss\Linear\Vector;
 use Gauss\Number\Number;
-use Gauss\Number\NumericValue;
 use InvalidArgumentException;
 
 final class Point
@@ -16,7 +15,7 @@ final class Point
     ) {
     }
 
-    public static function of(int|float|string|NumericValue ...$coordinates): self
+    public static function of(int|float|string| Number ...$coordinates): self
     {
         if ($coordinates === []) {
             throw new InvalidArgumentException('Point requires at least one coordinate value.');
@@ -30,7 +29,7 @@ final class Point
         return $this->coordinates;
     }
 
-    public function distanceTo(self $other): NumericValue
+    public function distanceTo(self $other): Number
     {
         return $this->coordinates->distance($other->coordinates);
     }
@@ -42,7 +41,7 @@ final class Point
 
     public function midpoint(self $other): self
     {
-        $half = Number::of('1/2');
+        $half = Number::of(1)->div(2);
 
         return new self(
             $this->coordinates->add($other->coordinates)->scale($half)

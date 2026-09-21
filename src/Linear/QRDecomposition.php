@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Gauss\Linear;
 
 use InvalidArgumentException;
-use Gauss\Number\NumericValue;
+use Gauss\Number\Number;
 
 final class QRDecomposition
 {

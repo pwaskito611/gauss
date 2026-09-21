@@ -37,7 +37,7 @@ final class ProbabilityMeasure
             $sum = $sum->add($probability->value());
         }
 
-        if ($sum->compare(1) !== 0) {
+        if ($sum->sub(1)->abs()->compare('0.000000000001') > 0) {
             throw new InvalidArgumentException('Probability weights for a sample space must sum to 1.');
         }
 

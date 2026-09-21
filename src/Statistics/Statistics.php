@@ -8,7 +8,6 @@ use DivisionByZeroError;
 use Gauss\Linear\Matrix;
 use Gauss\Linear\Vector;
 use Gauss\Number\Number;
-use Gauss\Number\NumericValue;
 use InvalidArgumentException;
 
 final class Statistics
@@ -188,7 +187,7 @@ final class Statistics
 
     public static function quantile(
         array|Vector $data,
-        int|float|string|NumericValue $probability,
+        int|float|string|Number $probability,
     ): Number {
         $values = self::sortedValues($data);
         $probability = Number::of($probability);
@@ -224,7 +223,7 @@ final class Statistics
 
     public static function percentile(
         array|Vector $data,
-        int|float|string|NumericValue $percentile,
+        int|float|string|Number $percentile,
     ): Number {
         return self::quantile($data, Number::of($percentile)->div(Number::of(100)));
     }
@@ -428,7 +427,7 @@ final class Statistics
         }
 
         return array_map(
-            static fn (int|float|string|NumericValue $value): Number => Number::of($value),
+            static fn (int|float|string|Number $value): Number => Number::of($value),
             array_values($values)
         );
     }

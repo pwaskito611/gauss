@@ -6,7 +6,6 @@ namespace Gauss\Tests\Unit\Linear;
 
 use Gauss\Linear\Vector;
 use Gauss\Number\Number;
-use Gauss\Number\Rational;
 use InvalidArgumentException;
 use LogicException;
 use PHPUnit\Framework\TestCase;
@@ -79,7 +78,7 @@ final class VectorTest extends TestCase
 
         self::assertSame('25', $vector->dot($vector)->value());
         self::assertSame('25', $vector->normSquared()->value());
-        self::assertSame('5.00000000000000000000000000000000000000000000000000', $vector->norm()->value());
+        self::assertSame('5', $vector->norm()->value());
     }
 
     public function testCrossProduct(): void
@@ -102,7 +101,7 @@ final class VectorTest extends TestCase
 
         self::assertSame('0', $vector->distance($vector)->value());
         self::assertSame(
-            ['0.60000000000000000000000000000000000000000000000000', '0.80000000000000000000000000000000000000000000000000'],
+            ['0.6', '0.8'],
             $this->valuesOf($vector->normalize())
         );
     }
@@ -128,14 +127,7 @@ final class VectorTest extends TestCase
         );
 
         self::assertSame(['2', '4'], $this->valuesOf($mapped));
-        self::assertSame(Rational::class, $mapped->get(0)->type());
-    }
-
-    public function testNormalizeRejectsUnsupportedNonRealNorm(): void
-    {
-        $this->expectException(LogicException::class);
-
-        Vector::of(Number::of('1/2'), Number::of('1/2'))->norm();
+        self::assertSame('integer', $mapped->get(0)->type());
     }
 
     /** @return list<string> */

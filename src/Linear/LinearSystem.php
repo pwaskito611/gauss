@@ -8,7 +8,7 @@ use Gauss\Linear\Solution\InfiniteSolutions;
 use Gauss\Linear\Solution\LinearSystemSolution;
 use Gauss\Linear\Solution\NoSolution;
 use Gauss\Linear\Solution\UniqueSolution;
-use Gauss\Number\NumericValue;
+use Gauss\Number\Number;
 use InvalidArgumentException;
 
 final class LinearSystem
@@ -89,7 +89,7 @@ final class LinearSystem
         }
 
         return new UniqueSolution(Vector::of(...array_map(
-            static fn (NumericValue $value): NumericValue => $value,
+            static fn (Number $value): Number => $value,
             $values
         )));
     }
@@ -109,7 +109,7 @@ final class LinearSystem
         return $this->hasSolution();
     }
 
-    private function isZero(NumericValue $value): bool
+    private function isZero(Number $value): bool
     {
         return $value->value() === $value->sub($value)->value();
     }

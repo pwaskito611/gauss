@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Gauss\Geometry;
 
 use Gauss\Number\Number;
-use Gauss\Number\NumericValue;
 use InvalidArgumentException;
 
 final class Circle
@@ -34,12 +33,12 @@ final class Circle
         return $this->radius;
     }
 
-    public function area(): NumericValue
+    public function area(): Number
     {
         return $this->radius->pow(2)->mul(Number::pi());
     }
 
-    public function circumference(): NumericValue
+    public function circumference(): Number
     {
         return $this->radius->mul(2)->mul(Number::pi());
     }

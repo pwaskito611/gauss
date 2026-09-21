@@ -106,7 +106,7 @@ final class NumericalTest extends TestCase
         self::assertLessThanOrEqual(
             0,
             Number::of($integral->value())
-                ->sub('8/3')
+                ->sub(Number::of(8)->div(3))
                 ->abs()
                 ->compare('0.001')
         );
@@ -124,7 +124,7 @@ final class NumericalTest extends TestCase
         self::assertLessThanOrEqual(
             0,
             Number::of($integral->value())
-                ->sub('8/3')
+                ->sub(Number::of(8)->div(3))
                 ->abs()
                 ->compare('0.000000000001')
         );
@@ -207,10 +207,10 @@ final class NumericalTest extends TestCase
                 [Number::of(1), Number::of(1)],
                 [Number::of(2), Number::of(4)],
             ],
-            Number::of('3/2'),
+            Number::of('1.5'),
         );
 
-        self::assertSame(0, $value->compare('9/4'));
+        self::assertSame(0, $value->compare('2.25'));
     }
 
     public function testLagrangeInterpolationRejectsDuplicateXValues(): void

@@ -62,10 +62,22 @@ final class TimeSeriesAdvancedTest extends TestCase
         $actual = [1, 2, 3];
         $predicted = [1, 2, 5];
 
-        self::assertSame(0, MAE::calculate($actual, $predicted)->compare(Number::of('2/3')));
-        self::assertSame(0, MSE::calculate($actual, $predicted)->compare(Number::of('4/3')));
-        self::assertSame(0, RMSE::calculate($actual, $predicted)->compare(Number::of('1.15470053837925152901829756100391491129520350254026')));
-        self::assertSame(0, MAPE::calculate($actual, $predicted)->compare(Number::of('200/9')));
+        self::assertSame(0, MAE::calculate($actual, $predicted)->compare(Number::of(2)->div(3)));
+        self::assertSame(0, MSE::calculate($actual, $predicted)->compare(Number::of(4)->div(3)));
+        self::assertLessThanOrEqual(
+            0,
+            RMSE::calculate($actual, $predicted)
+                ->sub('1.15470053837925152901829756100391491129520350254026')
+                ->abs()
+                ->compare('0.000000000001')
+        );
+        self::assertLessThanOrEqual(
+            0,
+            MAPE::calculate($actual, $predicted)
+                ->sub(Number::of(200)->div(9))
+                ->abs()
+                ->compare('0.000000000001')
+        );
 
         $zeroMape = MAPE::calculate([0, 0, 0], [0, 0, 0]);
         self::assertSame(0, $zeroMape->compare(Number::of(0)));

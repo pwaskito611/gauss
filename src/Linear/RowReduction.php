@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Gauss\Linear;
 
-use Gauss\Number\NumericValue;
+use Gauss\Number\Number;
 use InvalidArgumentException;
 
 /** Immutable Gaussian elimination result for a matrix. */
@@ -146,12 +146,12 @@ final class RowReduction
         return [Matrix::of($rows), $operations];
     }
 
-    private function isZero(NumericValue $value): bool
+    private function isZero(Number $value): bool
     {
         return $value->value() === $value->sub($value)->value();
     }
 
-    private function isOne(NumericValue $value): bool
+    private function isOne(Number $value): bool
     {
         return $value->value() === $value->one()->value();
     }

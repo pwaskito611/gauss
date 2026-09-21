@@ -6,7 +6,6 @@ namespace Gauss\Tests\Unit\Algebra;
 
 use Gauss\Algebra\Monomial;
 use Gauss\Number\Number;
-use Gauss\Number\Rational;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
@@ -36,13 +35,13 @@ final class MonomialTest extends TestCase
 
     public function testOperationsAndCalculus(): void
     {
-        $term = new Monomial(Number::of('1/3'), 3);
+        $term = new Monomial(Number::of(1)->div(3), 3);
 
-        self::assertSame('1', $term->add(new Monomial(Number::of('2/3'), 3))->coefficient()->value());
-        self::assertSame('2/3', $term->mul(new Monomial(Number::of(2), 1))->coefficient()->value());
-        self::assertSame('1', $term->derivative()->coefficient()->value());
-        self::assertSame('1/12', $term->integral()->coefficient()->value());
-        self::assertSame(Rational::class, $term->coefficient()->type());
+        self::assertSame('1', $term->add(new Monomial(Number::of(2)->div(3), 3))->coefficient()->value());
+        self::assertSame('0.666666666666666666666666666666666666666666666666666666666666', $term->mul(new Monomial(Number::of(2), 1))->coefficient()->value());
+        self::assertSame('0.' . str_repeat('9', 60), $term->derivative()->coefficient()->value());
+        self::assertSame('0.08333333333333333333333333333333333333333333333333333333333325', $term->integral()->coefficient()->value());
+        self::assertSame('decimal', $term->coefficient()->type());
     }
 
     public function testDifferentDegreesCannotBeAdded(): void

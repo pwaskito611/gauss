@@ -14,6 +14,10 @@ use InvalidArgumentException;
 
 final class MA
 {
+    private const WORK_SCALE = 50;
+    private const MAX_ITERATIONS = 10;
+    private const CONVERGENCE_TOLERANCE = '0.000000000001';
+
     /** @var list<Number> */
     private readonly array $coefficients;
 
@@ -74,7 +78,9 @@ final class MA
                 for ($column = 0; $column < $columnCount; $column++) {
                     $sum = Number::of(0);
                     foreach ($rows as $entry) {
-                        $sum = $sum->add($entry[$row]->mul($entry[$column]));
+                        $sum = self::limitPrecision(
+                            $sum->add($entry[$row]->mul($entry[$column]))
+                        );
                     }
                     $current[] = $sum;
                 }
@@ -85,7 +91,9 @@ final class MA
             for ($column = 0; $column < $columnCount; $column++) {
                 $sum = Number::of(0);
                 foreach ($rows as $index => $row) {
-                    $sum = $sum->add($row[$column]->mul($targets[$index]));
+                    $sum = self::limitPrecision(
+                        $sum->add($row[$column]->mul($targets[$index]))
+                    );
                 }
                 $xty[] = $sum;
             }
@@ -99,15 +107,39 @@ final class MA
                 break;
             }
 
-            $coefficients = $solution->vector()->values();
+            $nextCoefficients = array_map(
+                self::limitPrecision(...),
+                $solution->vector()->values()
+            );
+            $converged = true;
+            foreach ($nextCoefficients as $index => $coefficient) {
+                if (
+                    $coefficient->sub($coefficients[$index])->abs()->compare(
+                        self::CONVERGENCE_TOLERANCE
+                    ) > 0
+                ) {
+                    $converged = false;
+                    break;
+                }
+            }
+
+            $coefficients = $nextCoefficients;
             foreach ($values as $index => $value) {
-                $residual = $value->sub($mean);
+                $residual = self::limitPrecision($value->sub($mean));
                 for ($lag = 1; $lag <= $order; $lag++) {
                     if ($index - $lag >= 0) {
-                        $residual = $residual->sub($coefficients[$lag - 1]->mul($residuals[$index - $lag]));
+                        $residual = self::limitPrecision(
+                            $residual->sub(
+                                $coefficients[$lag - 1]->mul($residuals[$index - $lag])
+                            )
+                        );
                     }
                 }
                 $residuals[$index] = $residual;
+            }
+
+            if ($converged) {
+                break;
             }
         }
 
@@ -160,15 +192,24 @@ final class MA
         $residuals = [];
 
         foreach ($values as $index => $value) {
-            $residual = $value->sub($this->mean);
+            $residual = self::limitPrecision($value->sub($this->mean));
             for ($lag = 1; $lag <= $this->order; $lag++) {
                 if ($index - $lag >= 0) {
-                    $residual = $residual->sub($this->coefficients[$lag - 1]->mul($residuals[$index - $lag]));
+                    $residual = self::limitPrecision(
+                        $residual->sub(
+                            $this->coefficients[$lag - 1]->mul($residuals[$index - $lag])
+                        )
+                    );
                 }
             }
             $residuals[] = $residual;
         }
 
         return TimeSeries::of($residuals);
+    }
+
+    private static function limitPrecision(Number $value): Number
+    {
+        return $value->round(self::WORK_SCALE);
     }
 }

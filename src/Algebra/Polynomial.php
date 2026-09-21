@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Gauss\Algebra;
 
-use Gauss\Number\NumericValue;
+use Gauss\Number\Number;
 use DivisionByZeroError;
 use InvalidArgumentException;
 
@@ -12,20 +12,20 @@ use InvalidArgumentException;
  * Immutable polynomial: a0 + a1 x + a2 x^2 + ... + an x^n
  *
  * Coefficients are stored sparsely, keyed by degree.
- * All numeric operations delegate to NumericValue.
+ * All numeric operations delegate to Number.
  */
 final class Polynomial
 {
-    /** @var array<int, NumericValue> degree => coefficient */
+    /** @var array<int, Number> degree => coefficient */
     private readonly array $coefficients;
 
-    /** A NumericValue representing 0, used for type-consistent zero. */
-    private readonly NumericValue $zero;
+    /** A Number representing 0, used for consistent zero handling. */
+    private readonly Number $zero;
 
     /**
-     * @param array<int, NumericValue> $coefficients
+     * @param array<int, Number> $coefficients
      */
-    private function __construct(array $coefficients, NumericValue $zero)
+    private function __construct(array $coefficients, Number $zero)
     {
         $this->zero = $zero;
 
@@ -54,7 +54,7 @@ final class Polynomial
     // ------------------------------------------------------------------
 
     /**
-     * @param array<int, NumericValue> $coefficients degree => NumericValue
+     * @param array<int, Number> $coefficients degree => Number
      */
     public static function of(array $coefficients): self
     {
@@ -71,12 +71,12 @@ final class Polynomial
         return new self($coefficients, $zero);
     }
 
-    public static function zero(NumericValue $zero): self
+    public static function zero(Number $zero): self
     {
         return new self([], $zero->sub($zero));
     }
 
-    public static function one(NumericValue $reference): self
+    public static function one(Number $reference): self
     {
         $zero = $reference->sub($reference);
         $one  = self::oneOf($reference);
@@ -84,7 +84,7 @@ final class Polynomial
         return new self([0 => $one], $zero);
     }
 
-    public static function constant(NumericValue $value): self
+    public static function constant(Number $value): self
     {
         $zero = $value->sub($value);
 
@@ -109,7 +109,7 @@ final class Polynomial
         return max(array_keys($this->coefficients));
     }
 
-    public function coefficient(int $degree): NumericValue
+    public function coefficient(int $degree): Number
     {
         if ($degree < 0) {
             throw new InvalidArgumentException(
@@ -121,7 +121,7 @@ final class Polynomial
     }
 
     /**
-     * @return array<int, NumericValue>
+     * @return array<int, Number>
      */
     public function coefficients(): array
     {
@@ -142,7 +142,7 @@ final class Polynomial
         return $terms;
     }
 
-    public function leadingCoefficient(): NumericValue
+    public function leadingCoefficient(): Number
     {
         if ($this->coefficients === []) {
             return $this->zero;
@@ -151,7 +151,7 @@ final class Polynomial
         return $this->coefficients[$this->degree()];
     }
 
-    public function constantTerm(): NumericValue
+    public function constantTerm(): Number
     {
         return $this->coefficient(0);
     }
@@ -230,7 +230,7 @@ final class Polynomial
         return new self($result, $this->zero);
     }
 
-    public function scale(NumericValue $scalar): Polynomial
+    public function scale(Number $scalar): Polynomial
     {
         if ($this->isZero()) {
             return $this;
@@ -297,7 +297,7 @@ final class Polynomial
     // Evaluation (Horner's method)
     // ------------------------------------------------------------------
 
-    public function evaluate(NumericValue $x): NumericValue
+    public function evaluate(Number $x): Number
     {
         if ($this->isZero()) {
             return $this->zero;
@@ -338,7 +338,7 @@ final class Polynomial
         return new self($result, $this->zero);
     }
 
-    public function integral(NumericValue $constant): Polynomial
+    public function integral(Number $constant): Polynomial
     {
         $result = [];
 
@@ -361,7 +361,7 @@ final class Polynomial
     // Helpers
     // ------------------------------------------------------------------
 
-    private function isZeroValue(NumericValue $value): bool
+    private function isZeroValue(Number $value): bool
     {
         $zero = $value->sub($value);
 
@@ -369,10 +369,9 @@ final class Polynomial
     }
 
     /**
-     * Build a NumericValue equal to integer $n, type-consistent with
-     * this polynomial's zero (i.e. with existing coefficients).
+    * Build a Number equal to integer $n.
      */
-    private function intValue(int $n): NumericValue
+    private function intValue(int $n): Number
     {
         if ($n === 0) {
             return $this->zero;
@@ -403,7 +402,7 @@ final class Polynomial
         return $value;
     }
 
-    private static function oneOf(NumericValue $reference): NumericValue
+    private static function oneOf(Number $reference): Number
     {
         return $reference->one();
     }

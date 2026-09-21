@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Gauss\Linear;
 
 use DivisionByZeroError;
-use Gauss\Number\NumericValue;
+use Gauss\Number\Number;
 use InvalidArgumentException;
 
 final class LUDecomposition
@@ -95,7 +95,7 @@ final class LUDecomposition
         return Vector::of(...$solution);
     }
 
-    public function determinant(): NumericValue
+    public function determinant(): Number
     {
         $result = $this->upper->get(0, 0)->one();
         for ($index = 0; $index < $this->upper->rows(); $index++) {
@@ -121,14 +121,14 @@ final class LUDecomposition
         $values = [];
         for ($row = 0; $row < $size; $row++) {
             $values[] = array_map(
-                static fn (int $column): NumericValue => $column === $row ? \Gauss\Number\Number::of(1) : \Gauss\Number\Number::of(0),
+                static fn (int $column): Number => $column === $row ? \Gauss\Number\Number::of(1) : \Gauss\Number\Number::of(0),
                 range(0, $size - 1)
             );
         }
         return $values;
     }
 
-    private static function isZero(NumericValue $value): bool
+    private static function isZero(Number $value): bool
     {
         return $value->value() === $value->sub($value)->value();
     }

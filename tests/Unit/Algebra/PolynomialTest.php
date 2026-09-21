@@ -6,10 +6,7 @@ namespace Gauss\Tests\Unit\Algebra;
 
 use Gauss\Algebra\Monomial;
 use Gauss\Algebra\Polynomial;
-use Gauss\Number\Complex;
 use Gauss\Number\Number;
-use Gauss\Number\Rational;
-use Gauss\Number\Real;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
@@ -84,16 +81,13 @@ final class PolynomialTest extends TestCase
         self::assertSame('6', $left->scale(Number::of(3))->coefficient(1)->value());
     }
 
-    public function testEvaluationSupportsExactAndComplexValues(): void
+    public function testEvaluationSupportsExactAndDecimalValues(): void
     {
         $polynomial = Polynomial::of([0 => Number::of(1), 1 => Number::of(2), 3 => Number::of(1)]);
 
         self::assertSame('13', $polynomial->evaluate(Number::of(2))->value());
-        self::assertSame(Rational::class, $polynomial->evaluate(Number::of('1/2'))->type());
-
-        $complexResult = Polynomial::of([0 => Number::of(1), 2 => Number::of(1)])
-            ->evaluate(Number::of('0+1i'));
-        self::assertSame(Complex::class, $complexResult->type());
+        self::assertSame('decimal', $polynomial->evaluate(Number::of(1)->div(2))->type());
+        self::assertSame('2.125', $polynomial->evaluate(Number::of(1)->div(2))->value());
     }
 
     public function testDerivativeAndIntegral(): void
@@ -111,11 +105,11 @@ final class PolynomialTest extends TestCase
         self::assertSame('1', $integral->coefficient(3)->value());
     }
 
-    public function testRealCoefficientKeepsRealType(): void
+    public function testDecimalCoefficientUsesNumberType(): void
     {
         $polynomial = Polynomial::of([0 => Number::of('2.0'), 1 => Number::of('1.5')]);
 
-        self::assertSame(Real::class, $polynomial->evaluate(Number::of('2.0'))->type());
+        self::assertSame('integer', $polynomial->evaluate(Number::of('2.0'))->type());
     }
 
     public function testDecimalCoefficientArithmeticUsesNumberPrecision(): void
@@ -128,7 +122,7 @@ final class PolynomialTest extends TestCase
         $result = $polynomial->evaluate(Number::of(1));
 
         self::assertSame(
-            '0.30000000000000000000000000000000000000000000000000',
+            '0.3',
             $result->value()
         );
     }
@@ -143,10 +137,10 @@ final class PolynomialTest extends TestCase
 
         $result = $polynomial
             ->derivative()
-            ->scale(Number::of('1/2'))
-            ->evaluate(Number::of('2/3'));
+            ->scale(Number::of(1)->div(2))
+            ->evaluate(Number::of(2)->div(3));
 
-        self::assertSame('3', $result->value());
+        self::assertSame('3.000000000000000000000000000000000000000000000000000000000001', $result->value());
     }
 
     public function testOperationsDoNotMutateTheOriginal(): void

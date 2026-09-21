@@ -21,10 +21,10 @@ final class ProbabilityTest extends TestCase
 {
     public function testProbabilityValueValidation(): void
     {
-        self::assertSame('1/2', Probability::of('1/2')->value());
+        self::assertSame('0.5', Probability::of('0.5')->value());
         self::assertSame('0', Probability::of('1')->complement()->value());
-        self::assertSame('1/2', Probability::of('1/3')->add(Probability::of('1/6'))->value());
-        self::assertSame('1/6', Probability::of('1/2')->multiply(Probability::of('1/3'))->value());
+        self::assertSame('0.5', Probability::of(Number::of(1)->div(3))->add(Probability::of(Number::of(1)->div(6)))->value());
+        self::assertSame('0.1666666666666666666666666666666666666666666666666666666666665', Probability::of('0.5')->multiply(Probability::of(Number::of(1)->div(3)))->value());
 
         $this->expectException(InvalidArgumentException::class);
         Probability::of('1.5');
@@ -53,12 +53,12 @@ final class ProbabilityTest extends TestCase
         $greaterThanThree = Event::of($space, 4, 5, 6);
         $measure = ProbabilityMeasure::uniform($space);
 
-        self::assertSame('1/2', $measure->probabilityOf($even)->value());
-        self::assertSame('1/2', $measure->probabilityOf($greaterThanThree)->value());
-        self::assertSame('2/3', $measure->conditional($even, $greaterThanThree)->value());
+        self::assertProbabilityApproximately('0.5', $measure->probabilityOf($even));
+        self::assertProbabilityApproximately('0.5', $measure->probabilityOf($greaterThanThree));
+        self::assertProbabilityApproximately('0.666666666666666666666666666666666666666666666666666666666667', $measure->conditional($even, $greaterThanThree));
 
         $conditional = ConditionalProbability::of($even, $greaterThanThree, $measure);
-        self::assertSame('2/3', $conditional->value()->value());
+        self::assertProbabilityApproximately('0.666666666666666666666666666666666666666666666666666666666667', $conditional->value());
     }
 
     public function testIndependenceAndExpectationVariance(): void
@@ -77,8 +77,8 @@ final class ProbabilityTest extends TestCase
             4 => '4',
         ]);
 
-        self::assertSame('5/2', Expectation::of($x, $measure)->value()->value());
-        self::assertSame('5/4', Variance::of($x, $measure)->value()->value());
+        self::assertSame('2.5', Expectation::of($x, $measure)->value()->value());
+        self::assertSame('1.25', Variance::of($x, $measure)->value()->value());
     }
 
     public function testConditionalProbabilityRejectsZeroDenominator(): void
@@ -87,11 +87,16 @@ final class ProbabilityTest extends TestCase
         $event = Event::of($space, 'A');
         $empty = Event::empty($space);
         $measure = ProbabilityMeasure::of($space, [
-            'A' => '1/2',
-            'B' => '1/2',
+            'A' => Number::of(1)->div(2),
+            'B' => Number::of(1)->div(2),
         ]);
 
         $this->expectException(DivisionByZeroError::class);
         $measure->conditional($event, $empty);
+    }
+
+    private static function assertProbabilityApproximately(string $expected, Probability $actual): void
+    {
+        self::assertLessThanOrEqual(0, Number::of($actual->value())->sub($expected)->abs()->compare('0.000000000001'));
     }
 }

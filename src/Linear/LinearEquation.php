@@ -5,18 +5,17 @@ declare(strict_types=1);
 namespace Gauss\Linear;
 
 use Gauss\Number\Number;
-use Gauss\Number\NumericValue;
 use InvalidArgumentException;
 
 final class LinearEquation
 {
     private function __construct(
         private readonly Vector $coefficients,
-        private readonly NumericValue $constant,
+        private readonly Number $constant,
     ) {
     }
 
-    public static function of(Vector $coefficients, int|float|string|NumericValue $constant): self
+    public static function of(Vector $coefficients, int|float|string|Number $constant): self
     {
         return new self($coefficients, Number::of($constant));
     }
@@ -26,7 +25,7 @@ final class LinearEquation
         return $this->coefficients;
     }
 
-    public function constant(): NumericValue
+    public function constant(): Number
     {
         return $this->constant;
     }
@@ -36,7 +35,7 @@ final class LinearEquation
         return $this->coefficients->dimension();
     }
 
-    public function evaluate(Vector $values): NumericValue
+    public function evaluate(Vector $values): Number
     {
         if ($values->dimension() !== $this->variables()) {
             throw new InvalidArgumentException('Variable count must match equation coefficients.');
@@ -61,7 +60,7 @@ final class LinearEquation
         return $this;
     }
 
-    public function scale(NumericValue $scalar): self
+    public function scale(Number $scalar): self
     {
         return new self($this->coefficients->scale($scalar), $this->constant->mul($scalar));
     }

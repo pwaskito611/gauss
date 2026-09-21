@@ -4,20 +4,20 @@ declare(strict_types=1);
 
 namespace Gauss\Algebra;
 
-use Gauss\Number\NumericValue;
+use Gauss\Number\Number;
 use InvalidArgumentException;
 
 /**
  * Represents a single polynomial term: a * x^n
  *
- * Immutable. All numeric operations delegate to NumericValue.
+ * Immutable. All numeric operations delegate to Number.
  */
 final class Monomial
 {
-    private readonly NumericValue $coefficient;
+    private readonly Number $coefficient;
     private readonly int $degree;
 
-    public function __construct(NumericValue $coefficient, int $degree = 0)
+    public function __construct(Number $coefficient, int $degree = 0)
     {
         if ($degree < 0) {
             throw new InvalidArgumentException(
@@ -29,7 +29,7 @@ final class Monomial
         $this->degree      = $degree;
     }
 
-    public function coefficient(): NumericValue
+    public function coefficient(): Number
     {
         return $this->coefficient;
     }
@@ -39,7 +39,7 @@ final class Monomial
         return $this->degree;
     }
 
-    public function evaluate(NumericValue $x): NumericValue
+    public function evaluate(Number $x): Number
     {
         if ($this->degree === 0) {
             return $this->coefficient;
@@ -122,9 +122,9 @@ final class Monomial
     // ------------------------------------------------------------------
 
     /**
-     * x^n via binary exponentiation, all through NumericValue.
+    * x^n via binary exponentiation, all through Number.
      */
-    private function intPower(NumericValue $base, int $exponent): NumericValue
+    private function intPower(Number $base, int $exponent): Number
     {
         $result = self::oneOf($base);
 
@@ -150,19 +150,17 @@ final class Monomial
     }
 
     /**
-     * Build a NumericValue representing integer 1, of the same
-     * numeric type as $reference, so arithmetic stays type-consistent.
+    * Build a Number representing integer 1.
      */
-    private static function oneOf(NumericValue $reference): NumericValue
+    private static function oneOf(Number $reference): Number
     {
         return $reference->one();
     }
 
     /**
-     * Build a NumericValue representing integer $n, of the same
-     * numeric type as the coefficient.
+     * Build a Number representing integer $n, consistent with the coefficient.
      */
-    private function fromInt(int $n): NumericValue
+    private function fromInt(int $n): Number
     {
         if ($n === 0) {
             return $this->coefficient->sub($this->coefficient);

@@ -6,7 +6,6 @@ namespace Gauss\Geometry;
 
 use Gauss\Linear\Vector;
 use Gauss\Number\Number;
-use Gauss\Number\NumericValue;
 use InvalidArgumentException;
 use LogicException;
 
@@ -58,7 +57,7 @@ final class Line
         );
     }
 
-    public function distanceTo(Point $point): NumericValue
+    public function distanceTo(Point $point): Number
     {
         $projected = $this->project($point);
 
@@ -85,7 +84,7 @@ final class Line
         );
     }
 
-    private static function determinant2D(Vector $left, Vector $right): NumericValue
+    private static function determinant2D(Vector $left, Vector $right): Number
     {
         return $left->get(0)->mul($right->get(1))->sub(
             $left->get(1)->mul($right->get(0))

@@ -19,9 +19,9 @@ final class GeometryTest extends TestCase
         $origin = Point::of(0, 0);
         $target = Point::of(3, 4);
 
-        self::assertSame('5.00000000000000000000000000000000000000000000000000', $origin->distanceTo($target)->value());
+        self::assertSame('5', $origin->distanceTo($target)->value());
         self::assertSame(['3', '4'], $this->vectorValues($origin->vectorTo($target)));
-        self::assertSame(['3/2', '2'], $this->pointValues($origin->midpoint($target)));
+        self::assertSame(['1.5', '2'], $this->pointValues($origin->midpoint($target)));
 
         $translated = $origin->translate(Vector::of(1, 2));
         self::assertSame(['1', '2'], $this->pointValues($translated));
@@ -33,14 +33,14 @@ final class GeometryTest extends TestCase
 
         self::assertTrue($line->contains(Point::of(4, 0)));
         self::assertSame(['4', '0'], $this->pointValues($line->project(Point::of(4, 3))));
-        self::assertSame('3.00000000000000000000000000000000000000000000000000', $line->distanceTo(Point::of(4, 3))->value());
+        self::assertSame('3', $line->distanceTo(Point::of(4, 3))->value());
     }
 
     public function testSegmentLengthAndMidpoint(): void
     {
         $segment = Segment::between(Point::of(0, 0), Point::of(6, 8));
 
-        self::assertSame('10.00000000000000000000000000000000000000000000000000', $segment->length()->value());
+        self::assertSame('10', $segment->length()->value());
         self::assertSame(['3', '4'], $this->pointValues($segment->midpoint()));
     }
 
@@ -48,8 +48,8 @@ final class GeometryTest extends TestCase
     {
         $circle = Circle::of(Point::of(0, 0), Number::of(3));
 
-        self::assertSame('28.27433388230820000000000000000000000000000000000000', $circle->area()->value());
-        self::assertSame('18.84955592153880000000000000000000000000000000000000', $circle->circumference()->value());
+        self::assertSame('28.27433388230813914616379044951552595777452459437599', $circle->area()->value());
+        self::assertSame('18.84955592153875943077586029967701730518301639625066', $circle->circumference()->value());
         self::assertTrue($circle->contains(Point::of(2, 0)));
         self::assertFalse($circle->contains(Point::of(4, 0)));
     }
@@ -65,7 +65,7 @@ final class GeometryTest extends TestCase
             ->scale(Number::of('0.5'))
             ->map(static fn ($value) => $value->mul(Number::of(2)));
 
-        self::assertSame(['0.60000000000000000000000000000000000000000000000000', '0.80000000000000000000000000000000000000000000000000'], $this->vectorValues($result));
+        self::assertSame(['0.6', '0.8'], $this->vectorValues($result));
     }
 
     /** @return list<string> */

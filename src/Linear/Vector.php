@@ -5,16 +5,15 @@ declare(strict_types=1);
 namespace Gauss\Linear;
 
 use Gauss\Number\Number;
-use Gauss\Number\NumericValue;
 use InvalidArgumentException;
 use LogicException;
 
 /**
- * Immutable finite-dimensional vector over NumericValue.
+ * Immutable finite-dimensional vector over Number.
  */
 final class Vector
 {
-    /** @var list<NumericValue> */
+    /** @var list<Number> */
     private readonly array $values;
 
     private function __construct(array $values)
@@ -24,18 +23,18 @@ final class Vector
         }
 
         foreach ($values as $value) {
-            if (! $value instanceof NumericValue) {
-                throw new InvalidArgumentException('Vector values must be NumericValue instances.');
+            if (! $value instanceof Number) {
+                throw new InvalidArgumentException('Vector values must be Number instances.');
             }
         }
 
         $this->values = array_values($values);
     }
 
-    public static function of(int|float|string|NumericValue ...$values): self
+    public static function of(int|float|string|Number ...$values): self
     {
         return new self(array_map(
-            static fn (int|float|string|NumericValue $value): NumericValue => Number::of($value),
+            static fn (int|float|string|Number $value): Number => Number::of($value),
             $values
         ));
     }
@@ -70,7 +69,7 @@ final class Vector
         return count($this->values);
     }
 
-    public function get(int $index): NumericValue
+    public function get(int $index): Number
     {
         if ($index < 0 || $index >= $this->dimension()) {
             throw new InvalidArgumentException('Vector index is outside the vector dimension.');
@@ -79,7 +78,7 @@ final class Vector
         return $this->values[$index];
     }
 
-    /** @return list<NumericValue> */
+    /** @return list<Number> */
     public function values(): array
     {
         return $this->values;
@@ -109,10 +108,10 @@ final class Vector
         return new self($values);
     }
 
-    public function scale(NumericValue $scalar): self
+    public function scale(Number $scalar): self
     {
         return new self(array_map(
-            static fn (NumericValue $value): NumericValue => $value->mul($scalar),
+            static fn (Number $value): Number => $value->mul($scalar),
             $this->values
         ));
     }
@@ -122,7 +121,7 @@ final class Vector
         return $this->scale(Number::of(-1));
     }
 
-    public function dot(self $other): NumericValue
+    public function dot(self $other): Number
     {
         $this->assertSameDimension($other);
         $result = $this->values[0]->sub($this->values[0]);
@@ -147,47 +146,24 @@ final class Vector
         ]);
     }
 
-    public function normSquared(): NumericValue
+    public function normSquared(): Number
     {
         return $this->dot($this);
     }
 
-    public function norm(): NumericValue
+    public function norm(): Number
     {
         $squaredValue = $this->normSquared()->value();
         if ($this->isZeroRepresentation($squaredValue)) {
             return $this->normSquared()->sub($this->normSquared());
         }
 
-        if (str_contains($squaredValue, '/') || str_contains($squaredValue, 'i')) {
-            throw new LogicException('Vector norm requires a real-valued NumericValue.');
+        $squared = Number::of($squaredValue);
+        if ($squared->compare(0) < 0) {
+            throw new LogicException('Vector norm requires a real-valued Number.');
         }
 
-        $squared = Number::of(
-            str_contains($squaredValue, '.') ? $squaredValue : $squaredValue . '.0'
-        );
-        $zero = $squared->sub($squared);
-
-        if ($this->isZeroRepresentation($squared->value())) {
-            return $zero;
-        }
-
-        if ($squared->type() !== \Gauss\Number\Real::class) {
-            throw new LogicException('Vector norm requires a real-valued NumericValue.');
-        }
-
-        $guess = Number::of('1.0');
-        $two = Number::of('2.0');
-
-        for ($iteration = 0; $iteration < 100; $iteration++) {
-            $next = $guess->add($squared->div($guess))->div($two);
-            if ($next->value() === $guess->value()) {
-                break;
-            }
-            $guess = $next;
-        }
-
-        return $guess;
+        return $squared->sqrt();
     }
 
     public function normalize(): self
@@ -200,7 +176,7 @@ final class Vector
         return $this->scale($norm->one()->div($norm));
     }
 
-    public function distance(self $other): NumericValue
+    public function distance(self $other): Number
     {
         return $this->sub($other)->norm();
     }
@@ -256,7 +232,7 @@ final class Vector
     public function map(callable $transform): self
     {
         return new self(array_map(
-            static fn (NumericValue $value): NumericValue => Number::of($transform($value)),
+            static fn (Number $value): Number => Number::of($transform($value)),
             $this->values
         ));
     }
