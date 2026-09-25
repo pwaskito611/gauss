@@ -282,17 +282,12 @@ final class Matrix
         if ($this->rowCount === 1) {
             return $this->values[0][0];
         }
-        if ($this->rowCount === 2) {
-            return $this->values[0][0]->mul($this->values[1][1])
-                ->sub($this->values[0][1]->mul($this->values[1][0]));
-        }
 
-        $result = $this->zero;
-        for ($column = 0; $column < $this->columnCount; $column++) {
-            $term = $this->values[0][$column]->mul($this->minor(0, $column)->determinant());
-            $result = ($column % 2 === 0) ? $result->add($term) : $result->sub($term);
+        try {
+            return LUDecomposition::of($this)->determinant();
+        } catch (DivisionByZeroError $exception) {
+            return $this->zero;
         }
-        return $result;
     }
 
     public function minor(int $row, int $column): self
@@ -328,7 +323,7 @@ final class Matrix
             throw new LogicException('Adjugate requires a square matrix.');
         }
         if ($this->rowCount === 1) {
-            return self::of([[1]]);
+            return new self([[$this->values[0][0]->one()]], $this->zero);
         }
 
         $rows = [];
@@ -344,42 +339,40 @@ final class Matrix
 
     public function inverse(): self
     {
-        $determinant = $this->determinant();
-        if ($this->isZeroValue($determinant)) {
+        if (! $this->isSquare()) {
+            throw new LogicException('Inverse requires a square matrix.');
+        }
+
+        try {
+            $lu = LUDecomposition::of($this);
+        } catch (DivisionByZeroError $exception) {
             throw new DivisionByZeroError('Cannot invert a singular matrix.');
         }
-        return $this->adjugate()->scale($determinant->one()->div($determinant));
+
+        $inverseRows = array_fill(0, $this->rowCount, array_fill(0, $this->columnCount, $this->zero));
+        $basisRows = [];
+        $one = $this->values[0][0]->one();
+        for ($row = 0; $row < $this->rowCount; $row++) {
+            $basisRows[] = array_map(
+                fn (int $column): Number => $column === $row ? $one : $this->zero,
+                range(0, $this->rowCount - 1)
+            );
+        }
+        $basis = new self($basisRows, $this->zero);
+
+        for ($column = 0; $column < $this->columnCount; $column++) {
+            $solution = $lu->solve($basis->column($column));
+            foreach ($solution->values() as $row => $value) {
+                $inverseRows[$row][$column] = $value;
+            }
+        }
+
+        return new self($inverseRows, $this->zero);
     }
 
     public function rank(): int
     {
-        $rows = $this->values;
-        $rank = 0;
-        for ($column = 0; $column < $this->columnCount && $rank < $this->rowCount; $column++) {
-            $pivot = null;
-            for ($row = $rank; $row < $this->rowCount; $row++) {
-                if (! $this->isZeroValue($rows[$row][$column])) {
-                    $pivot = $row;
-                    break;
-                }
-            }
-            if ($pivot === null) {
-                continue;
-            }
-            [$rows[$rank], $rows[$pivot]] = [$rows[$pivot], $rows[$rank]];
-            $pivotValue = $rows[$rank][$column];
-            for ($row = $rank + 1; $row < $this->rowCount; $row++) {
-                if ($this->isZeroValue($rows[$row][$column])) {
-                    continue;
-                }
-                $factor = $rows[$row][$column]->div($pivotValue);
-                for ($index = $column; $index < $this->columnCount; $index++) {
-                    $rows[$row][$index] = $rows[$row][$index]->sub($factor->mul($rows[$rank][$index]));
-                }
-            }
-            $rank++;
-        }
-        return $rank;
+        return RowReduction::of($this)->rank();
     }
 
     public function isSquare(): bool { return $this->rowCount === $this->columnCount; }
@@ -415,7 +408,7 @@ final class Matrix
         if ($this->shape() !== $other->shape()) return false;
         for ($row = 0; $row < $this->rowCount; $row++) {
             for ($column = 0; $column < $this->columnCount; $column++) {
-                if ($this->values[$row][$column]->value() !== $other->values[$row][$column]->value()) return false;
+                if ($this->values[$row][$column]->compare($other->values[$row][$column]) !== 0) return false;
             }
         }
         return true;
@@ -433,8 +426,8 @@ final class Matrix
         if ($this->shape() !== $other->shape()) throw new InvalidArgumentException('Matrix shapes must match.');
     }
 
-    private function isZeroValue(Number $value): bool
+    private static function isZeroValue(Number $value): bool
     {
-        return $value->value() === $value->sub($value)->value();
+        return $value->compare(0) === 0;
     }
 }

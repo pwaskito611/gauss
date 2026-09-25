@@ -109,8 +109,8 @@ final class LinearSystem
         return $this->hasSolution();
     }
 
-    private function isZero(Number $value): bool
+    private static function isZero(Number $value): bool
     {
-        return $value->value() === $value->sub($value)->value();
+        return $value->compare(0) === 0;
     }
 }

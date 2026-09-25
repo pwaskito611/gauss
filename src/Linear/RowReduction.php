@@ -7,17 +7,23 @@ namespace Gauss\Linear;
 use Gauss\Number\Number;
 use InvalidArgumentException;
 
-/** Immutable Gaussian elimination result for a matrix. */
+/** Memoized Gaussian elimination result for a matrix. */
 final class RowReduction
 {
     private readonly Matrix $matrix;
-    /** @var list<string> */
-    private readonly array $recordedOperations;
+    private ?Matrix $echelonCache = null;
+    private ?Matrix $reducedCache = null;
+    /** @var list<int>|null */
+    private ?array $pivotCache = null;
+    /** @var list<int>|null */
+    private ?array $freeCache = null;
+    private ?int $rankCache = null;
+    /** @var list<string>|null */
+    private ?array $reducedOperationsCache = null;
 
     private function __construct(Matrix $matrix)
     {
         $this->matrix = $matrix;
-        $this->recordedOperations = [];
     }
 
     public static function of(Matrix $matrix): self
@@ -27,18 +33,20 @@ final class RowReduction
 
     public function echelonForm(): Matrix
     {
-        [$matrix] = $this->reduce(false);
-        return $matrix;
+        return $this->echelonCache ??= $this->reduce(false)[0];
     }
 
     public function reducedEchelonForm(): Matrix
     {
-        [$matrix] = $this->reduce(true);
-        return $matrix;
+        return $this->reducedCache ??= $this->reduce(true)[0];
     }
 
     public function rank(): int
     {
+        if ($this->rankCache !== null) {
+            return $this->rankCache;
+        }
+
         $matrix = $this->echelonForm();
         $rank = 0;
         for ($row = 0; $row < $matrix->rows(); $row++) {
@@ -49,12 +57,17 @@ final class RowReduction
                 }
             }
         }
-        return $rank;
+
+        return $this->rankCache = $rank;
     }
 
     /** @return list<int> */
     public function pivotColumns(): array
     {
+        if ($this->pivotCache !== null) {
+            return $this->pivotCache;
+        }
+
         $matrix = $this->reducedEchelonForm();
         $pivots = [];
         for ($row = 0; $row < $matrix->rows(); $row++) {
@@ -66,12 +79,17 @@ final class RowReduction
                 break;
             }
         }
-        return $pivots;
+
+        return $this->pivotCache = $pivots;
     }
 
     /** @return list<int> */
     public function freeColumns(): array
     {
+        if ($this->freeCache !== null) {
+            return $this->freeCache;
+        }
+
         $pivotColumns = $this->pivotColumns();
         $free = [];
         for ($column = 0; $column < $this->matrix->columns(); $column++) {
@@ -79,19 +97,31 @@ final class RowReduction
                 $free[] = $column;
             }
         }
-        return $free;
+
+        return $this->freeCache = $free;
     }
 
     /** @return list<string> */
     public function operations(): array
     {
-        [, $operations] = $this->reduce(true);
-        return $operations;
+        if ($this->reducedOperationsCache !== null) {
+            return $this->reducedOperationsCache;
+        }
+
+        return $this->reducedOperationsCache = $this->reduce(true)[1];
     }
 
     /** @return array{0:Matrix,1:list<string>} */
     private function reduce(bool $reduced): array
     {
+        if ($reduced && $this->reducedCache !== null) {
+            return [$this->reducedCache, $this->reducedOperationsCache ?? []];
+        }
+
+        if (! $reduced && $this->echelonCache !== null) {
+            return [$this->echelonCache, []];
+        }
+
         $rows = [];
         for ($row = 0; $row < $this->matrix->rows(); $row++) {
             $values = [];
@@ -143,16 +173,24 @@ final class RowReduction
             $pivotRow++;
         }
 
-        return [Matrix::of($rows), $operations];
+        $matrix = Matrix::of($rows);
+        if ($reduced) {
+            $this->reducedCache = $matrix;
+            $this->reducedOperationsCache = $operations;
+        } else {
+            $this->echelonCache = $matrix;
+        }
+
+        return [$matrix, $operations];
     }
 
-    private function isZero(Number $value): bool
+    private static function isZero(Number $value): bool
     {
-        return $value->value() === $value->sub($value)->value();
+        return $value->compare(0) === 0;
     }
 
-    private function isOne(Number $value): bool
+    private static function isOne(Number $value): bool
     {
-        return $value->value() === $value->one()->value();
+        return $value->compare(1) === 0;
     }
 }

@@ -120,6 +120,14 @@ final class VectorTest extends TestCase
         self::assertTrue(Vector::zero(2)->isZero());
     }
 
+    public function testZeroChecksAreSemanticNotStringBased(): void
+    {
+        $vector = Vector::of(Number::of('0.0'), Number::of('0E-10'), Number::of('-0'));
+
+        self::assertTrue($vector->isZero());
+        self::assertSame('0', $vector->norm()->value());
+    }
+
     public function testMapReturnsAValueVector(): void
     {
         $mapped = Vector::of(1, 2)->map(

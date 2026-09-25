@@ -151,14 +151,18 @@ final class Vector
         return $this->dot($this);
     }
 
+    /**
+    * Returns the square root of the squared norm in the Number domain.
+     *
+     * The underlying domain must be able to represent the result.
+     */
     public function norm(): Number
     {
-        $squaredValue = $this->normSquared()->value();
-        if ($this->isZeroRepresentation($squaredValue)) {
-            return $this->normSquared()->sub($this->normSquared());
+        $squared = $this->normSquared();
+        if ($this->isZeroValue($squared)) {
+            return $squared;
         }
 
-        $squared = Number::of($squaredValue);
         if ($squared->compare(0) < 0) {
             throw new LogicException('Vector norm requires a real-valued Number.');
         }
@@ -169,7 +173,7 @@ final class Vector
     public function normalize(): self
     {
         $norm = $this->norm();
-        if ($this->isZeroRepresentation($norm->value())) {
+        if ($this->isZeroValue($norm)) {
             throw new LogicException('Cannot normalize the zero vector.');
         }
 
@@ -183,10 +187,8 @@ final class Vector
 
     public function isZero(): bool
     {
-        $zero = $this->values[0]->sub($this->values[0]);
-
         foreach ($this->values as $value) {
-            if ($value->value() !== $zero->value()) {
+            if (! $this->isZeroValue($value)) {
                 return false;
             }
         }
@@ -196,7 +198,7 @@ final class Vector
 
     public function isOrthogonalTo(self $other): bool
     {
-        return $this->dot($other)->value() === $this->dot($other)->sub($this->dot($other))->value();
+        return $this->isZeroValue($this->dot($other));
     }
 
     public function isParallelTo(self $other): bool
@@ -212,16 +214,16 @@ final class Vector
 
         $ratio = null;
         foreach ($this->values as $index => $value) {
-            if ($value->value() === '0') {
-                if ($other->values[$index]->value() !== '0') {
+            if ($this->isZeroValue($value)) {
+                if (! $this->isZeroValue($other->values[$index])) {
                     return false;
                 }
                 continue;
             }
 
             $current = $other->values[$index]->div($value);
-            $ratio ??= $current->value();
-            if ($current->value() !== $ratio) {
+            $ratio ??= $current;
+            if ($current->compare($ratio) !== 0) {
                 return false;
             }
         }
@@ -244,11 +246,8 @@ final class Vector
         }
     }
 
-    private function isZeroRepresentation(string $value): bool
+    private static function isZeroValue(Number $value): bool
     {
-        $value = ltrim($value, '+-');
-        $value = str_replace('.', '', $value);
-
-        return $value !== '' && trim($value, '0') === '';
+        return $value->compare(0) === 0;
     }
 }

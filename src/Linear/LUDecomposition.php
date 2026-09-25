@@ -26,10 +26,11 @@ final class LUDecomposition
 
         $size = $matrix->rows();
         $upper = self::values($matrix);
-        $lower = self::identityValues($size);
-        $permutation = self::identityValues($size);
-        $swaps = 0;
         $zero = $matrix->get(0, 0)->sub($matrix->get(0, 0));
+        $one = $matrix->get(0, 0)->one();
+        $lower = self::identityValues($size, $zero, $one);
+        $permutation = self::identityValues($size, $zero, $one);
+        $swaps = 0;
 
         for ($column = 0; $column < $size; $column++) {
             $pivot = null;
@@ -116,12 +117,12 @@ final class LUDecomposition
         return $values;
     }
 
-    private static function identityValues(int $size): array
+    private static function identityValues(int $size, Number $zero, Number $one): array
     {
         $values = [];
         for ($row = 0; $row < $size; $row++) {
             $values[] = array_map(
-                static fn (int $column): Number => $column === $row ? \Gauss\Number\Number::of(1) : \Gauss\Number\Number::of(0),
+                static fn (int $column): Number => $column === $row ? $one : $zero,
                 range(0, $size - 1)
             );
         }
@@ -130,6 +131,6 @@ final class LUDecomposition
 
     private static function isZero(Number $value): bool
     {
-        return $value->value() === $value->sub($value)->value();
+        return $value->compare(0) === 0;
     }
 }

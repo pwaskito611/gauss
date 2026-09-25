@@ -111,6 +111,15 @@ final class MatrixTest extends TestCase
         Matrix::of([[1, 2], [2, 4]])->inverse();
     }
 
+    public function testZeroChecksUseNumericComparison(): void
+    {
+        $matrix = Matrix::of([[1, 0], [0, Number::of('0.000')]]);
+
+        self::assertSame('0', $matrix->determinant()->value());
+        $this->expectException(DivisionByZeroError::class);
+        $matrix->inverse();
+    }
+
     /** @return list<string> */
     private function valuesOf(Vector $vector): array
     {

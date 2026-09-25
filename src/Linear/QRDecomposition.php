@@ -36,7 +36,7 @@ final class QRDecomposition
             }
 
             $norm = $vector->norm();
-            if ($norm->value() === '0' || str_replace('0.', '', $norm->value()) === '') {
+            if ($norm->compare(0) === 0) {
                 throw new InvalidArgumentException('QR decomposition requires linearly independent columns.');
             }
             $rValues[$column][$column] = $norm;
@@ -67,6 +67,10 @@ final class QRDecomposition
     public function Q(): Matrix { return $this->q; }
     public function R(): Matrix { return $this->r; }
 
+    /**
+     * Solves square systems and tall systems in the least-squares sense.
+     * Underdetermined matrices are rejected by of().
+     */
     public function solve(Vector $rhs): Vector
     {
         if ($rhs->dimension() !== $this->q->rows()) {

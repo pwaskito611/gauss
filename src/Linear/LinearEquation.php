@@ -47,13 +47,13 @@ final class LinearEquation
     public function normalize(): self
     {
         foreach ($this->coefficients->values() as $coefficient) {
-            if ($coefficient->value() !== $coefficient->sub($coefficient)->value()) {
+            if (! $this->isZeroValue($coefficient)) {
                 $factor = $coefficient->one()->div($coefficient);
                 return $this->scale($factor);
             }
         }
 
-        if ($this->constant->value() !== $this->constant->sub($this->constant)->value()) {
+        if (! $this->isZeroValue($this->constant)) {
             return $this->scale($this->constant->one()->div($this->constant));
         }
 
@@ -70,5 +70,10 @@ final class LinearEquation
         $row = $this->coefficients->values();
         $row[] = $this->constant;
         return Matrix::of([$row]);
+    }
+
+    private static function isZeroValue(Number $value): bool
+    {
+        return $value->compare(0) === 0;
     }
 }

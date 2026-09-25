@@ -39,8 +39,11 @@ final class LinearMap
 
     public function kernel(): VectorSpace
     {
-        $rref = RowReduction::of($this->matrix)->reducedEchelonForm();
-        $freeColumns = RowReduction::of($this->matrix)->freeColumns();
+        $reduction = RowReduction::of($this->matrix);
+        $rref = $reduction->reducedEchelonForm();
+        $freeColumns = $reduction->freeColumns();
+        $pivotColumns = $reduction->pivotColumns();
+
         if ($freeColumns === []) {
             return VectorSpace::zero($this->domainDimension());
         }
@@ -50,7 +53,6 @@ final class LinearMap
             $zero = $rref->get(0, 0)->sub($rref->get(0, 0));
             $values = array_fill(0, $this->domainDimension(), $zero);
             $values[$freeColumn] = $zero->one();
-            $pivotColumns = RowReduction::of($this->matrix)->pivotColumns();
             foreach ($pivotColumns as $row => $pivotColumn) {
                 $values[$pivotColumn] = $zero->sub($rref->get($row, $freeColumn));
             }
@@ -62,6 +64,7 @@ final class LinearMap
 
     public function image(): VectorSpace
     {
+        $reduction = RowReduction::of($this->matrix);
         $columns = [];
         for ($column = 0; $column < $this->matrix->columns(); $column++) {
             $columns[] = $this->matrix->column($column);
@@ -70,7 +73,7 @@ final class LinearMap
             return VectorSpace::zero($this->codomainDimension());
         }
 
-        $pivotColumns = RowReduction::of($this->matrix)->pivotColumns();
+        $pivotColumns = $reduction->pivotColumns();
         if ($pivotColumns === []) {
             return VectorSpace::zero($this->codomainDimension());
         }

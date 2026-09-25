@@ -7,6 +7,7 @@ namespace Gauss\Tests\Unit\Linear;
 use Gauss\Linear\Matrix;
 use Gauss\Linear\QRDecomposition;
 use Gauss\Linear\Vector;
+use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
 final class QRDecompositionTest extends TestCase
@@ -27,6 +28,38 @@ final class QRDecompositionTest extends TestCase
 
         $this->assertApproximately('1', $solution->get(0)->value());
         $this->assertApproximately('2', $solution->get(1)->value());
+    }
+
+    public function testSquareSolveReconstructsRightHandSide(): void
+    {
+        $matrix = Matrix::of([[2, 1], [1, 2]]);
+        $rhs = Vector::of(5, 4);
+        $solution = QRDecomposition::of($matrix)->solve($rhs);
+        $reconstructed = $matrix->multiplyVector($solution);
+
+        for ($index = 0; $index < $rhs->dimension(); $index++) {
+            $this->assertApproximately($rhs->get($index)->value(), $reconstructed->get($index)->value());
+        }
+    }
+
+    public function testTallSolveReturnsLeastSquaresSolution(): void
+    {
+        $matrix = Matrix::of([[1, 0], [0, 1], [1, 1]]);
+        $rhs = Vector::of(1, 2, 0);
+        $solution = QRDecomposition::of($matrix)->solve($rhs);
+        $residual = $matrix->multiplyVector($solution)->sub($rhs);
+
+        $normalResidual = $matrix->transpose()->multiplyVector($residual);
+        for ($index = 0; $index < $normalResidual->dimension(); $index++) {
+            $this->assertApproximately('0', $normalResidual->get($index)->value());
+        }
+    }
+
+    public function testUnderdeterminedMatricesRemainUnsupported(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        QRDecomposition::of(Matrix::of([[1, 0, 0], [0, 1, 0]]));
     }
 
     private function assertMatrixApproximately(Matrix $expected, Matrix $actual): void
