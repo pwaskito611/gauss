@@ -26,7 +26,7 @@ final class Geometric implements DiscreteDistribution
     public function pmf(int|float|string|Number $x): Probability
     {
         $k = Number::of($x);
-        if ($k->compare(1) < 0) {
+        if (! $k->isIntegerLike() || $k->compare(1) < 0) {
             return Probability::of(0);
         }
 

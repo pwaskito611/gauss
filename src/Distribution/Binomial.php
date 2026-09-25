@@ -30,7 +30,12 @@ final class Binomial implements DiscreteDistribution
 
     public function pmf(int|float|string|Number $x): Probability
     {
-        $k = (int) Number::of($x)->value();
+        $value = Number::of($x);
+        if (! $value->isIntegerLike()) {
+            return Probability::of(0);
+        }
+
+        $k = (int) $value->value();
         if ($k < 0 || $k > $this->trials) {
             return Probability::of(0);
         }
@@ -48,7 +53,12 @@ final class Binomial implements DiscreteDistribution
 
     public function cdf(int|float|string|Number $x): Probability
     {
-        $threshold = (int) Number::of($x)->value();
+        $value = Number::of($x);
+        if ($value->compare(0) < 0) {
+            return Probability::of(0);
+        }
+
+        $threshold = (int) $value->value();
         if ($threshold < 0) {
             return Probability::of(0);
         }

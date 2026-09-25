@@ -30,6 +30,9 @@ final class Poisson implements DiscreteDistribution
         if ($k->compare(0) < 0) {
             return Probability::of(0);
         }
+        if (! $k->isIntegerLike()) {
+            return Probability::of(0);
+        }
 
         $factorial = $this->factorial((int) $k->value());
 

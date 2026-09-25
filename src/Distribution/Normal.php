@@ -117,7 +117,8 @@ final class Normal implements ContinuousDistribution
             ->mul($t)
             ->add($a2)
             ->mul($t)
-            ->add($a1);
+            ->add($a1)
+            ->mul($t);
 
         $exponential = Number::of(-1)
             ->mul($abs->pow(2))
