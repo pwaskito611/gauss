@@ -51,6 +51,30 @@ final class PolynomialDivisionTest extends TestCase
         self::assertTrue($division->remainder()->isZero());
     }
 
+    public function testDivisionPreservesTheDividendIdentity(): void
+    {
+        $dividend = Polynomial::of([0 => Number::of(-1), 2 => Number::of(1)]);
+        $divisor = Polynomial::of([0 => Number::of(-1), 1 => Number::of(1)]);
+        $division = $dividend->divide($divisor);
+
+        $reconstructed = $division->quotient()->mul($divisor)->add($division->remainder());
+
+        self::assertSame($dividend->evaluate(Number::of(2))->value(), $reconstructed->evaluate(Number::of(2))->value());
+        self::assertSame($dividend->evaluate(Number::of(3))->value(), $reconstructed->evaluate(Number::of(3))->value());
+        self::assertTrue($division->remainder()->isZero());
+    }
+
+    public function testLowerDegreeDividendProducesZeroQuotient(): void
+    {
+        $dividend = Polynomial::of([0 => Number::of(1), 1 => Number::of(1)]);
+        $divisor = Polynomial::of([0 => Number::of(1), 1 => Number::of(1), 2 => Number::of(1)]);
+        $division = $dividend->divide($divisor);
+
+        self::assertTrue($division->quotient()->isZero());
+        self::assertSame('1', $division->remainder()->constantTerm()->value());
+        self::assertSame('1', $division->remainder()->coefficient(1)->value());
+    }
+
     public function testDivisionCanReconstructTheDividend(): void
     {
         $dividend = Polynomial::of([
@@ -68,6 +92,31 @@ final class PolynomialDivisionTest extends TestCase
 
         self::assertSame($dividend->evaluate(Number::of(2))->value(), $reconstructed->evaluate(Number::of(2))->value());
         self::assertSame($dividend->evaluate(Number::of(3))->value(), $reconstructed->evaluate(Number::of(3))->value());
+    }
+
+    public function testDivisionFailsFastWhenLeadingTermDoesNotReduceRemainder(): void
+    {
+        $this->expectException(\RuntimeException::class);
+
+        $method = new \ReflectionMethod(Polynomial::class, 'assertDivisionProgress');
+        $method->setAccessible(true);
+
+        $method->invoke(
+            null,
+            Polynomial::of([1 => Number::of(5)]),
+            Polynomial::of([1 => Number::of(5)]),
+            1
+        );
+    }
+
+    public function testZeroDividendDivisionTerminatesAndReturnsCanonicalZero(): void
+    {
+        $division = Polynomial::zero(Number::of(0))->divide(
+            Polynomial::of([0 => Number::of(2), 1 => Number::of(1)])
+        );
+
+        self::assertTrue($division->quotient()->isZero());
+        self::assertTrue($division->remainder()->isZero());
     }
 
     public function testDecimalDivisionPreservesNumberPrecision(): void

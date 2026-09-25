@@ -54,6 +54,28 @@ final class PolynomialTest extends TestCase
         self::assertFalse($zero->isMonic());
     }
 
+    public function testZeroAlgebraIdentityInvariants(): void
+    {
+        $p = Polynomial::of([0 => Number::of(1), 1 => Number::of(2), 2 => Number::of(3)]);
+
+        self::assertTrue($p->add(Polynomial::zero(Number::of(0)))->coefficients() === $p->coefficients());
+        self::assertTrue(Polynomial::zero(Number::of(0))->add($p)->coefficients() === $p->coefficients());
+        self::assertTrue($p->sub($p)->isZero());
+        self::assertTrue($p->mul(Polynomial::zero(Number::of(0)))->isZero());
+        self::assertTrue(Polynomial::zero(Number::of(0))->mul($p)->isZero());
+    }
+
+    public function testZeroCoefficientPolynomialIsCanonicalZero(): void
+    {
+        $polynomial = Polynomial::of([
+            5 => Number::of(0),
+        ]);
+
+        self::assertTrue($polynomial->isZero());
+        self::assertSame(0, $polynomial->degree());
+        self::assertSame('0', $polynomial->leadingCoefficient()->value());
+    }
+
     public function testConstantZeroAndNegativeDegreeAreHandled(): void
     {
         self::assertTrue(Polynomial::constant(Number::of(0))->isZero());

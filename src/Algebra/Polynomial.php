@@ -88,7 +88,7 @@ final class Polynomial
     {
         $zero = $value->sub($value);
 
-        if ($zero->value() === $value->value()) {
+        if (self::isZeroValue($value)) {
             // value is zero → represent as zero polynomial
             return new self([], $zero);
         }
@@ -103,7 +103,10 @@ final class Polynomial
     public function degree(): int
     {
         if ($this->coefficients === []) {
-            return 0; // zero polynomial convention
+            // Public Gauss convention: zero polynomial keeps degree 0.
+            // This preserves backward compatibility while zero coefficients
+            // remain normalized away from the internal sparse representation.
+            return 0;
         }
 
         return max(array_keys($this->coefficients));
@@ -281,13 +284,22 @@ final class Polynomial
             // coefficient = remainderLeading / divisorLeading
             $termCoefficient = $remainderLeading->div($divisorLeading);
 
+            if (self::isZeroValue($termCoefficient)) {
+                throw new \RuntimeException(
+                    'Polynomial division cannot progress: leading term division did not produce a valid quotient term.'
+                );
+            }
+
             $term = new Polynomial(
                 [$termDegree => $termCoefficient],
                 $this->zero
             );
 
+            $nextRemainder = $remainder->sub($term->mul($divisor));
+            self::assertDivisionProgress($remainder, $nextRemainder, $remainderDegree);
+
             $quotient  = $quotient->add($term);
-            $remainder = $remainder->sub($term->mul($divisor));
+            $remainder = $nextRemainder;
         }
 
         return new PolynomialDivision($quotient, $remainder);
@@ -349,10 +361,9 @@ final class Polynomial
             $result[$newDegree] = $coefficient->div($n);
         }
 
-        // + C
-        $result[0] = isset($result[0])
-            ? $result[0]->add($constant)
-            : $constant;
+        // + C. The integrated original terms always shift degree by +1,
+        // so there is no degree-0 term produced by the polynomial itself.
+        $result[0] = $constant;
 
         return new self($result, $this->zero);
     }
@@ -361,11 +372,25 @@ final class Polynomial
     // Helpers
     // ------------------------------------------------------------------
 
-    private function isZeroValue(Number $value): bool
-    {
-        $zero = $value->sub($value);
+    private static function assertDivisionProgress(
+        Polynomial $currentRemainder,
+        Polynomial $nextRemainder,
+        int $currentDegree
+    ): void {
+        if ($nextRemainder->isZero()) {
+            return;
+        }
 
-        return $value->value() === $zero->value();
+        if ($nextRemainder->degree() >= $currentDegree) {
+            throw new \RuntimeException(
+                'Polynomial division cannot progress: the remainder degree did not decrease.'
+            );
+        }
+    }
+
+    private static function isZeroValue(Number $value): bool
+    {
+        return $value->compare(0) === 0;
     }
 
     /**

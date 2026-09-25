@@ -25,12 +25,36 @@ final class MonomialTest extends TestCase
         self::assertSame('0', $term->evaluate(Number::of(0))->value());
     }
 
+    public function testZeroCoefficientIsCanonicalized(): void
+    {
+        $zero = new Monomial(Number::of(0), 5);
+
+        self::assertTrue($zero->isZero());
+        self::assertTrue($zero->isConstant());
+        self::assertSame(0, $zero->degree());
+    }
+
+    public function testZeroMonomialAddsCleanlyToNonZeroTerm(): void
+    {
+        $sum = (new Monomial(Number::of(0), 5))->add(new Monomial(Number::of(3), 2));
+
+        self::assertSame(2, $sum->degree());
+        self::assertSame('3', $sum->coefficient()->value());
+    }
+
     public function testZeroCoefficientCanBeIntegrated(): void
     {
         $integral = (new Monomial(Number::of(0), 2))->integral();
 
         self::assertTrue($integral->isZero());
-        self::assertSame(3, $integral->degree());
+        self::assertSame(0, $integral->degree());
+    }
+
+    public function testZeroPowerSemanticsAreCorrect(): void
+    {
+        self::assertSame('0', (new Monomial(Number::of(3), 2))->evaluate(Number::of(0))->value());
+        self::assertSame('0', (new Monomial(Number::of(3), 5))->evaluate(Number::of(0))->value());
+        self::assertSame('3', (new Monomial(Number::of(3), 0))->evaluate(Number::of(0))->value());
     }
 
     public function testOperationsAndCalculus(): void

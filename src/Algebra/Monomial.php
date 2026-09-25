@@ -25,6 +25,13 @@ final class Monomial
             );
         }
 
+        if (self::isZeroNumber($coefficient)) {
+            $this->coefficient = $coefficient->sub($coefficient);
+            $this->degree      = 0;
+
+            return;
+        }
+
         $this->coefficient = $coefficient;
         $this->degree      = $degree;
     }
@@ -41,11 +48,11 @@ final class Monomial
 
     public function evaluate(Number $x): Number
     {
-        if ($this->degree === 0) {
+        if ($this->isZero() || $this->degree === 0) {
             return $this->coefficient;
         }
 
-        if ($x->value() === '0') {
+        if (self::isZeroNumber($x)) {
             return $this->coefficient->sub($this->coefficient);
         }
 
@@ -57,6 +64,14 @@ final class Monomial
 
     public function add(Monomial $other): Monomial
     {
+        if ($this->isZero()) {
+            return $other;
+        }
+
+        if ($other->isZero()) {
+            return $this;
+        }
+
         if ($this->degree !== $other->degree) {
             throw new InvalidArgumentException(
                 'Cannot add monomials of different degrees: '
@@ -72,6 +87,10 @@ final class Monomial
 
     public function mul(Monomial $other): Monomial
     {
+        if ($this->isZero() || $other->isZero()) {
+            return new self($this->coefficient->sub($this->coefficient), 0);
+        }
+
         return new self(
             $this->coefficient->mul($other->coefficient),
             $this->degree + $other->degree
@@ -80,7 +99,7 @@ final class Monomial
 
     public function derivative(): Monomial
     {
-        if ($this->degree === 0) {
+        if ($this->isZero() || $this->degree === 0) {
             // d/dx (a) = 0
             return new self(
                 $this->coefficient->sub($this->coefficient), // zero of same type
@@ -97,6 +116,10 @@ final class Monomial
 
     public function integral(): Monomial
     {
+        if ($this->isZero()) {
+            return new self($this->coefficient->sub($this->coefficient), 0);
+        }
+
         $newDegree      = $this->degree + 1;
         $newCoefficient = $this->coefficient->div(
             self::fromInt($newDegree)
@@ -112,9 +135,7 @@ final class Monomial
 
     public function isZero(): bool
     {
-        $zero = $this->coefficient->sub($this->coefficient);
-
-        return $this->coefficient->value() === $zero->value();
+        return self::isZeroNumber($this->coefficient);
     }
 
     // ------------------------------------------------------------------
@@ -174,5 +195,10 @@ final class Monomial
         }
 
         return $value;
+    }
+
+    private static function isZeroNumber(Number $value): bool
+    {
+        return $value->compare(0) === 0;
     }
 }
