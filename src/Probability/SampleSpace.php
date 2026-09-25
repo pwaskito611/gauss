@@ -18,7 +18,17 @@ final class SampleSpace
             throw new InvalidArgumentException('Sample space cannot be empty.');
         }
 
-        $this->outcomes = array_values(array_unique($outcomes, SORT_REGULAR));
+        $unique = [];
+        $identities = [];
+        foreach ($outcomes as $outcome) {
+            $identity = OutcomeIdentity::key($outcome);
+            if (! isset($identities[$identity])) {
+                $identities[$identity] = true;
+                $unique[] = $outcome;
+            }
+        }
+
+        $this->outcomes = $unique;
     }
 
     /** @param mixed ...$outcomes */
@@ -33,10 +43,21 @@ final class SampleSpace
         return $this->outcomes;
     }
 
+    /** @return list<mixed> */
+    public function values(): array
+    {
+        return $this->outcomes;
+    }
+
     public function contains(mixed $outcome): bool
     {
+        if (is_float($outcome) && is_nan($outcome)) {
+            return false;
+        }
+
+        $identity = OutcomeIdentity::key($outcome);
         foreach ($this->outcomes as $item) {
-            if ($item === $outcome) {
+            if (OutcomeIdentity::key($item) === $identity) {
                 return true;
             }
         }

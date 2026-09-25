@@ -12,51 +12,110 @@ final class ProbabilityMeasure
 {
     private readonly SampleSpace $space;
 
-    /** @var array<mixed, Probability> */
+    /** @var array<string, Probability> */
     private readonly array $weights;
 
-    /** @param array<mixed, Probability|string|int|float> $weights */
-    private function __construct(SampleSpace $space, array $weights)
+    /** @param array<mixed, Probability|string|int|float|Number|array{0:mixed,1:Probability|string|int|float|Number}> $weights */
+    private function __construct(SampleSpace $space, array $weights, bool $explicitMap = false)
     {
-        foreach ($space->outcomes() as $outcome) {
-            if (! array_key_exists($outcome, $weights)) {
+        $probabilities = [];
+        $outcomes = $space->outcomes();
+        if (! $explicitMap) {
+            if (! array_is_list($weights) || count($weights) !== count($outcomes)) {
+                throw new InvalidArgumentException('ProbabilityMeasure::of() requires one positional weight per outcome.');
+            }
+
+            $entries = [];
+            foreach ($outcomes as $index => $outcome) {
+                $entries[] = [$outcome, $weights[$index]];
+            }
+        } else {
+            $entries = [];
+            $pairMap = array_is_list($weights) && $weights !== []
+                && is_array($weights[0]) && count($weights[0]) === 2;
+            foreach ($weights as $candidate => $weight) {
+                if ($pairMap) {
+                    if (! is_array($weight) || count($weight) !== 2) {
+                        throw new InvalidArgumentException('Mapped weights must contain outcome-weight pairs.');
+                    }
+                    $entries[] = [$weight[0], $weight[1]];
+                } else {
+                    $entries[] = [$candidate, $weight];
+                }
+            }
+        }
+
+        $sourceIdentities = [];
+        foreach ($entries as [$candidate]) {
+            $identity = OutcomeIdentity::key($candidate);
+            if (isset($sourceIdentities[$identity])) {
+                throw new InvalidArgumentException('Each sample-space outcome may have only one probability weight.');
+            }
+            $sourceIdentities[$identity] = true;
+        }
+
+        foreach ($outcomes as $outcome) {
+            $outcomeIdentity = OutcomeIdentity::key($outcome);
+            $found = false;
+            foreach ($entries as [$candidate, $weight]) {
+                if (OutcomeIdentity::key($candidate) === $outcomeIdentity) {
+                    $probabilities[$outcomeIdentity] = Probability::of($weight);
+                    $found = true;
+                    break;
+                }
+            }
+            if (! $found) {
                 throw new InvalidArgumentException('Each sample-space outcome must have a probability weight.');
             }
         }
 
-        $probabilities = [];
-        foreach ($weights as $outcome => $probability) {
-            if (! $space->contains($outcome)) {
-                throw new InvalidArgumentException('Probability weights must correspond to the sample space.');
-            }
-            $probabilities[$outcome] = Probability::of($probability);
+        if (count($sourceIdentities) !== count($outcomes)) {
+            throw new InvalidArgumentException('Probability weights must correspond to the sample space.');
         }
 
-        $sum = Number::of(0);
+        $sample = reset($probabilities)->value();
+        $sum = $sample->sub($sample);
+        $one = $sample->one();
         foreach ($probabilities as $probability) {
             $sum = $sum->add($probability->value());
         }
 
-        if ($sum->sub(1)->abs()->compare('0.000000000001') > 0) {
-            throw new InvalidArgumentException('Probability weights for a sample space must sum to 1.');
+        if ($sum->compare($one) !== 0) {
+            throw new InvalidArgumentException('Probability weights for a sample space must sum to exactly 1.');
         }
 
         $this->space = $space;
         $this->weights = $probabilities;
     }
 
+    /** @param list<Probability|string|int|float|Number> $weights */
     public static function of(SampleSpace $space, array $weights): self
     {
         return new self($space, $weights);
     }
 
+    /**
+     * Creates a measure from explicit outcome-weight pairs or a scalar-keyed map.
+     * Pair form supports outcomes that cannot be PHP array keys, such as objects.
+     *
+     * @param array<mixed, Probability|string|int|float|Number|array{0:mixed,1:Probability|string|int|float|Number}> $weights
+     */
+    public static function fromMap(SampleSpace $space, array $weights): self
+    {
+        return new self($space, $weights, true);
+    }
+
     public static function uniform(SampleSpace $space): self
     {
-        $weights = [];
         $count = Number::of($space->size());
-        foreach ($space->outcomes() as $outcome) {
-            $weights[$outcome] = Number::of(1)->div($count);
+        $sample = $count->one();
+        $unitWeight = $sample->div($count);
+        $weights = array_fill(0, $space->size(), $unitWeight);
+        $sum = $unitWeight->sub($unitWeight);
+        for ($index = 0; $index < $space->size() - 1; $index++) {
+            $sum = $sum->add($unitWeight);
         }
+        $weights[$space->size() - 1] = $sample->sub($sum);
 
         return new self($space, $weights);
     }
@@ -71,15 +130,27 @@ final class ProbabilityMeasure
         $this->assertSameSampleSpace($event);
 
         if ($event->isEmpty()) {
-            return Probability::of(0);
+            return Probability::of($this->weights[array_key_first($this->weights)]->value()->sub(
+                $this->weights[array_key_first($this->weights)]->value()
+            ));
         }
 
-        $sum = Number::of(0);
+        $first = $this->weights[array_key_first($this->weights)]->value();
+        $sum = $first->sub($first);
         foreach ($event->outcomes() as $outcome) {
-            $sum = $sum->add($this->weights[$outcome]->value());
+            $sum = $sum->add($this->probabilityFor($outcome)->value());
         }
 
         return Probability::of($sum);
+    }
+
+    public function probabilityFor(mixed $outcome): Probability
+    {
+        if (! $this->space->contains($outcome)) {
+            throw new InvalidArgumentException('Outcome is not in the sample space.');
+        }
+
+        return $this->weights[OutcomeIdentity::key($outcome)];
     }
 
     public function conditional(Event $a, Event $b): Probability
@@ -92,7 +163,7 @@ final class ProbabilityMeasure
         }
 
         $numerator = $this->probabilityOf($a->intersection($b));
-        $ratio = Number::of($numerator->value())->div(Number::of($denominator->value()));
+        $ratio = $numerator->value()->div($denominator->value());
 
         return Probability::of($ratio);
     }
@@ -104,9 +175,9 @@ final class ProbabilityMeasure
         $jointProbability = $this->probabilityOf($a->intersection($b));
         $left = $this->probabilityOf($a);
         $right = $this->probabilityOf($b);
-        $product = Number::of($left->value())->mul(Number::of($right->value()));
+        $product = $left->value()->mul($right->value());
 
-        return Number::of($jointProbability->value())->compare($product) === 0;
+        return $jointProbability->value()->compare($product) === 0;
     }
 
     private function assertSameSampleSpace(Event ...$events): void
@@ -116,8 +187,8 @@ final class ProbabilityMeasure
                 throw new InvalidArgumentException('Event must belong to the same sample space.');
             }
 
-            foreach ($this->space->outcomes() as $index => $outcome) {
-                if ($outcome !== $event->sampleSpace()->outcomes()[$index]) {
+            foreach ($this->space->outcomes() as $outcome) {
+                if (! $event->sampleSpace()->contains($outcome)) {
                     throw new InvalidArgumentException('Event must belong to the same sample space.');
                 }
             }

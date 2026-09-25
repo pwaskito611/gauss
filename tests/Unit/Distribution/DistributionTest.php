@@ -21,9 +21,9 @@ final class DistributionTest extends TestCase
     {
         $distribution = Bernoulli::of('0.5');
 
-        self::assertSame('0.5', $distribution->pmf(1)->value());
-        self::assertSame('0.5', $distribution->pmf(0)->value());
-        self::assertSame('0.5', $distribution->cdf(0)->value());
+        self::assertSame('0.5', $distribution->pmf(1)->value()->value());
+        self::assertSame('0.5', $distribution->pmf(0)->value()->value());
+        self::assertSame('0.5', $distribution->cdf(0)->value()->value());
         self::assertSame('0.5', $distribution->expectation()->value());
         self::assertSame('0.25', $distribution->variance()->value());
     }
@@ -32,8 +32,8 @@ final class DistributionTest extends TestCase
     {
         $distribution = Binomial::of(5, '0.5');
 
-        self::assertSame('0.3125', $distribution->pmf(2)->value());
-        self::assertSame('0.5', $distribution->cdf(2)->value());
+        self::assertSame('0.3125', $distribution->pmf(2)->value()->value());
+        self::assertSame('0.5', $distribution->cdf(2)->value()->value());
         self::assertSame('2.5', $distribution->expectation()->value());
         self::assertSame('1.25', $distribution->variance()->value());
     }
@@ -42,9 +42,9 @@ final class DistributionTest extends TestCase
     {
         $distribution = Geometric::of('0.5');
 
-        self::assertSame('0.5', $distribution->pmf(1)->value());
-        self::assertSame('0.25', $distribution->pmf(2)->value());
-        self::assertSame('0.75', $distribution->cdf(2)->value());
+        self::assertSame('0.5', $distribution->pmf(1)->value()->value());
+        self::assertSame('0.25', $distribution->pmf(2)->value()->value());
+        self::assertSame('0.75', $distribution->cdf(2)->value()->value());
         self::assertSame('2', $distribution->expectation()->value());
         self::assertSame('2', $distribution->variance()->value());
     }
@@ -55,7 +55,7 @@ final class DistributionTest extends TestCase
 
         self::assertSame('3', $distribution->expectation()->value());
         self::assertSame('3', $distribution->variance()->value());
-        self::assertSame(0, Number::of($distribution->pmf(0)->value())->compare('0.04978706836786394297934241565006177663169959218842'));
+        self::assertSame(0, $distribution->pmf(0)->value()->compare('0.04978706836786394297934241565006177663169959218842'));
     }
 
     public function testUniformDistribution(): void
@@ -63,7 +63,7 @@ final class DistributionTest extends TestCase
         $distribution = Uniform::of(0, 2);
 
         self::assertSame('0.5', $distribution->pdf(1)->value());
-        self::assertSame('0.5', $distribution->cdf(1)->value());
+        self::assertSame('0.5', $distribution->cdf(1)->value()->value());
         self::assertSame('1', $distribution->expectation()->value());
         self::assertSame('0.3333333333333333333333333333333333333333333333333333333333333', $distribution->variance()->value());
     }
@@ -74,7 +74,7 @@ final class DistributionTest extends TestCase
 
         self::assertSame('0', $distribution->expectation()->value());
         self::assertSame('1', $distribution->variance()->value());
-        self::assertSame(0, Number::of($distribution->cdf(0)->value())->compare('0.5'));
+        self::assertSame(0, $distribution->cdf(0)->value()->compare('0.5'));
     }
 
     public function testExponentialDistribution(): void

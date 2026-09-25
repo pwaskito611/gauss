@@ -23,7 +23,16 @@ final class Event
         }
 
         $this->space = $space;
-        $this->outcomes = array_values(array_unique($outcomes, SORT_REGULAR));
+        $unique = [];
+        $identities = [];
+        foreach ($outcomes as $outcome) {
+            $identity = OutcomeIdentity::key($outcome);
+            if (! isset($identities[$identity])) {
+                $identities[$identity] = true;
+                $unique[] = $outcome;
+            }
+        }
+        $this->outcomes = $unique;
     }
 
     /** @param mixed ...$outcomes */
@@ -55,8 +64,13 @@ final class Event
 
     public function contains(mixed $outcome): bool
     {
+        if (is_float($outcome) && is_nan($outcome)) {
+            return false;
+        }
+
+        $identity = OutcomeIdentity::key($outcome);
         foreach ($this->outcomes as $item) {
-            if ($item === $outcome) {
+            if (OutcomeIdentity::key($item) === $identity) {
                 return true;
             }
         }
@@ -66,24 +80,20 @@ final class Event
 
     public function equals(self $other): bool
     {
-        if ($this->space->size() !== $other->space->size()) {
+        if (! $this->sameSampleSpace($other)) {
             return false;
         }
 
-        $thisSet = $this->outcomes;
-        $otherSet = $other->outcomes;
-
-        sort($thisSet);
-        sort($otherSet);
-
-        return $thisSet === $otherSet;
+        return count($this->outcomes) === count($other->outcomes)
+            && $this->containsAll($other->outcomes)
+            && $other->containsAll($this->outcomes);
     }
 
     public function union(self $other): self
     {
         $this->assertSameSampleSpace($other);
 
-        return new self($this->space, array_values(array_unique(array_merge($this->outcomes, $other->outcomes), SORT_REGULAR)));
+        return new self($this->space, array_merge($this->outcomes, $other->outcomes));
     }
 
     public function intersection(self $other): self
@@ -133,14 +143,38 @@ final class Event
 
     private function assertSameSampleSpace(self $other): void
     {
-        if ($this->space->size() !== $other->space->size()) {
+        if (! $this->sameSampleSpace($other)) {
             throw new InvalidArgumentException('Events must share the same sample space.');
         }
+    }
 
-        foreach ($this->space->outcomes() as $index => $outcome) {
-            if ($outcome !== $other->space->outcomes()[$index]) {
-                throw new InvalidArgumentException('Events must share the same sample space.');
+    private function sameSampleSpace(self $other): bool
+    {
+        return $this->space->size() === $other->space->size()
+            && $this->containsSampleSpaceOutcomes($other->space)
+            && $other->containsSampleSpaceOutcomes($this->space);
+    }
+
+    /** @param list<mixed> $outcomes */
+    private function containsAll(array $outcomes): bool
+    {
+        foreach ($outcomes as $outcome) {
+            if (! $this->contains($outcome)) {
+                return false;
             }
         }
+
+        return true;
+    }
+
+    private function containsSampleSpaceOutcomes(SampleSpace $space): bool
+    {
+        foreach ($space->outcomes() as $outcome) {
+            if (! $this->space->contains($outcome)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

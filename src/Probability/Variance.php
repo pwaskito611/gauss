@@ -25,7 +25,7 @@ final class Variance
         $sum = Number::of(0);
 
         foreach ($this->variable->sampleSpace()->outcomes() as $outcome) {
-            $probability = $this->measure->probabilityOf(Event::of($this->variable->sampleSpace(), $outcome));
+            $probability = $this->measure->probabilityFor($outcome);
             $deviation = $this->variable->valueFor($outcome)->sub($mean);
             $sum = $sum->add($deviation->pow(2)->mul($probability->value()));
         }

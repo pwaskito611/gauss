@@ -24,7 +24,7 @@ final class Expectation
         $sum = Number::of(0);
 
         foreach ($this->variable->sampleSpace()->outcomes() as $outcome) {
-            $probability = $this->measure->probabilityOf(Event::of($this->variable->sampleSpace(), $outcome));
+            $probability = $this->measure->probabilityFor($outcome);
             $sum = $sum->add($this->variable->valueFor($outcome)->mul($probability->value()));
         }
 
