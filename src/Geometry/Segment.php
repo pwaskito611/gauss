@@ -30,6 +30,9 @@ final class Segment
         return $this->end;
     }
 
+    /**
+     * Returns the Euclidean length; the Number domain must support its sqrt.
+     */
     public function length(): Number
     {
         return $this->start->distanceTo($this->end);
@@ -59,8 +62,9 @@ final class Segment
 
         $dot = $relative->dot($direction);
         $lengthSquared = $direction->dot($direction);
-        $zero = Number::of(0);
-        $one = Number::of(1);
+        $sample = $direction->get(0);
+        $zero = $sample->sub($sample);
+        $one = $sample->one();
 
         $parameter = $dot->div($lengthSquared);
 

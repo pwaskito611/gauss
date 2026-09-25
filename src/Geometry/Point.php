@@ -7,7 +7,9 @@ namespace Gauss\Geometry;
 use Gauss\Linear\Vector;
 use Gauss\Number\Number;
 use InvalidArgumentException;
+use LogicException;
 
+/** A point represented by coordinates in the Number domain. */
 final class Point
 {
     private function __construct(
@@ -15,7 +17,7 @@ final class Point
     ) {
     }
 
-    public static function of(int|float|string| Number ...$coordinates): self
+    public static function of(int|float|string|Number ...$coordinates): self
     {
         if ($coordinates === []) {
             throw new InvalidArgumentException('Point requires at least one coordinate value.');
@@ -29,6 +31,9 @@ final class Point
         return $this->coordinates;
     }
 
+    /**
+     * Returns the Euclidean distance; the Number domain must support its sqrt.
+     */
     public function distanceTo(self $other): Number
     {
         return $this->coordinates->distance($other->coordinates);
@@ -39,9 +44,20 @@ final class Point
         return $other->coordinates->sub($this->coordinates);
     }
 
+    /**
+     * Returns the classical midpoint and therefore requires division by 2.
+     * It is undefined in characteristic 2, where 2 is zero.
+     */
     public function midpoint(self $other): self
     {
-        $half = Number::of(1)->div(2);
+        $sample = $this->coordinates->get(0);
+        $one = $sample->one();
+        $two = $one->add($one);
+        $zero = $sample->sub($sample);
+        if ($two->compare($zero) === 0) {
+            throw new LogicException('Midpoint is undefined in characteristic 2.');
+        }
+        $half = $one->div($two);
 
         return new self(
             $this->coordinates->add($other->coordinates)->scale($half)
@@ -62,7 +78,7 @@ final class Point
         }
 
         foreach ($this->coordinates->values() as $index => $value) {
-            if ($value->value() !== $other->coordinates->get($index)->value()) {
+            if ($value->compare($other->coordinates->get($index)) !== 0) {
                 return false;
             }
         }

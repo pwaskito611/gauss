@@ -40,14 +40,19 @@ final class Line
         return $point->coordinates()->sub($this->point->coordinates())->isParallelTo($this->direction);
     }
 
+    /**
+     * Projects a point using the direction self-dot-product as denominator.
+     * Projection is undefined when that denominator is zero.
+     */
     public function project(Point $point): Point
     {
         $relative = $point->coordinates()->sub($this->point->coordinates());
         $denominator = $this->direction->dot($this->direction);
-        $zero = Number::of(0);
+        $sample = $this->direction->get(0);
+        $zero = $sample->sub($sample);
 
         if ($denominator->compare($zero) === 0) {
-            throw new LogicException('Line direction cannot be the zero vector.');
+            throw new LogicException('Line direction has zero self-dot-product; projection is undefined.');
         }
 
         $scalar = $relative->dot($this->direction)->div($denominator);
@@ -57,6 +62,9 @@ final class Line
         );
     }
 
+    /**
+     * Returns the distance via projection and requires the Number domain's sqrt.
+     */
     public function distanceTo(Point $point): Number
     {
         $projected = $this->project($point);
@@ -71,8 +79,8 @@ final class Line
         }
 
         $determinant = self::determinant2D($this->direction, $other->direction);
-        if ($determinant->compare(0) === 0) {
-            throw new LogicException('Lines are parallel and do not intersect at a unique point.');
+        if ($determinant->compare($determinant->sub($determinant)) === 0) {
+            throw new LogicException('Lines are parallel (or coincident) and do not intersect at a unique point.');
         }
 
         $offset = $other->point->coordinates()->sub($this->point->coordinates());
