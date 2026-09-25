@@ -86,7 +86,28 @@ final class StatisticsTest extends TestCase
         self::assertNumberValue('0.666666666666666666666666666666666666666666666666666666666667', Statistics::centralMoment($data, 2));
         self::assertSame(0, Statistics::skewness($data)->compare(0));
         self::assertNumberApproximately('1.5', Statistics::kurtosis($data));
-        self::assertNumberApproximately('-2.5', Statistics::excessKurtosis($data));
+        self::assertNumberApproximately('-1.5', Statistics::excessKurtosis($data));
+    }
+
+    public function testExcessKurtosisSubtractsThreeFromPearsonKurtosis(): void
+    {
+        $normalLike = [-1, 0, 0, 0, 0, 1];
+
+        self::assertNumberApproximately('3', Statistics::kurtosis($normalLike));
+        self::assertNumberApproximately('0', Statistics::excessKurtosis($normalLike));
+    }
+
+    public function testModeGroupsValuesByNumericEquality(): void
+    {
+        $mode = Statistics::mode([
+            Number::of('1.0'),
+            Number::of(2),
+            Number::of('1.00'),
+            Number::of(2),
+            Number::of('1'),
+        ]);
+
+        self::assertSame(0, $mode->compare(1));
     }
 
     public function testDependenceStatisticsAndSampleCovariance(): void
@@ -109,6 +130,34 @@ final class StatisticsTest extends TestCase
         self::assertNumberApproximately('1', Number::of($correlations->get(0, 1)));
         self::assertInstanceOf(Number::class, $matrix->get(0, 0));
         self::assertInstanceOf(Number::class, $correlations->get(1, 1));
+    }
+
+    public function testMatrixStatisticsAreSymmetricWithVarianceDiagonals(): void
+    {
+        $data = Matrix::of([[1, 2, 4], [2, 4, 8], [3, 6, 12]]);
+        $covariance = Statistics::covarianceMatrix($data);
+        $correlation = Statistics::correlationMatrix($data);
+
+        for ($row = 0; $row < $covariance->rows(); $row++) {
+            for ($column = 0; $column < $covariance->columns(); $column++) {
+                self::assertSame(
+                    0,
+                    $covariance->get($row, $column)->compare($covariance->get($column, $row))
+                );
+                self::assertSame(
+                    0,
+                    $correlation->get($row, $column)->compare($correlation->get($column, $row))
+                );
+            }
+
+            self::assertSame(
+                0,
+                $covariance->get($row, $row)->compare(
+                    Statistics::populationVariance($data->column($row))
+                )
+            );
+            self::assertNumberApproximately('1', Number::of($correlation->get($row, $row)));
+        }
     }
 
     public function testAllMathematicalStatisticsReturnNumber(): void
