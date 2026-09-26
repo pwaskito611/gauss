@@ -8,6 +8,7 @@ use Gauss\Discrete\Sequence\ArithmeticSequence;
 use Gauss\Discrete\Sequence\GeometricSequence;
 use Gauss\Discrete\Sequence\Recurrence;
 use Gauss\Number\Number;
+use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
 final class SequenceTest extends TestCase
@@ -37,5 +38,39 @@ final class SequenceTest extends TestCase
 
         self::assertSame('1', $sequence->first()->value());
         self::assertSame('13', $sequence->at(Number::of(7))->value());
+    }
+
+    public function testRecurrenceRequiresExactlyTwoInitialValues(): void
+    {
+        foreach ([[], [Number::of(0)], [Number::of(0), Number::of(1), Number::of(2)]] as $initialValues) {
+            try {
+                Recurrence::of(
+                    $initialValues,
+                    static fn (Number $previous, Number $before): Number => $previous->add($before),
+                );
+                self::fail('Expected a second-order recurrence to require exactly two initial values.');
+            } catch (InvalidArgumentException) {
+                self::assertTrue(true);
+            }
+        }
+    }
+
+    public function testRecurrenceRejectsNonIntegerIndexes(): void
+    {
+        $sequence = Recurrence::of(
+            [Number::of(0), Number::of(1)],
+            static fn (Number $previous, Number $before): Number => $previous->add($before),
+        );
+
+        $this->expectException(InvalidArgumentException::class);
+        $sequence->at(Number::of('2.5'));
+    }
+
+    public function testGeometricSequenceRejectsExponentsOutsideNumberPowRange(): void
+    {
+        $sequence = GeometricSequence::from(Number::of(2), Number::of(3));
+
+        $this->expectException(InvalidArgumentException::class);
+        $sequence->at(Number::of('100000000000000000000'));
     }
 }

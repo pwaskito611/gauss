@@ -31,4 +31,32 @@ final class SetTest extends TestCase
 
         self::assertTrue($relation->contains([Number::of(1), Number::of(2)]));
     }
+
+    public function testRelationDeduplicatesEqualPairs(): void
+    {
+        $relation = Relation::of([
+            [Number::of(1), Number::of(2)],
+            [Number::of('1.0'), Number::of('2.0')],
+            [Number::of(2), Number::of(4)],
+        ]);
+
+        self::assertSame(2, $relation->count());
+    }
+
+    public function testRelationCompositionDeduplicatesPairs(): void
+    {
+        $left = Relation::of([
+            [Number::of(1), Number::of(2)],
+            [Number::of(1), Number::of(3)],
+        ]);
+        $right = Relation::of([
+            [Number::of(2), Number::of(4)],
+            [Number::of(3), Number::of(4)],
+        ]);
+
+        $composed = $left->compose($right);
+
+        self::assertSame(1, $composed->count());
+        self::assertTrue($composed->contains([Number::of(1), Number::of(4)]));
+    }
 }

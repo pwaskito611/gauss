@@ -28,10 +28,6 @@ final class ModularInverse
         }
 
         $inverse = $extended->coefficientX();
-        if ($a->compare(Number::of(0)) < 0) {
-            $inverse = $inverse->mul(Number::of(-1));
-        }
-
         $inverse = $inverse->mod($modulus);
         return $inverse;
     }

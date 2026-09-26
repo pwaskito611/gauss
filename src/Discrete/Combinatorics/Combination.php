@@ -16,10 +16,9 @@ final class Combination
         $r = $r->compare($n->sub($r)) <= 0 ? $r : $n->sub($r);
         $result = Number::of(1);
 
-        for ($value = 1; $value <= (int) $r->value(); $value++) {
-            $numerator = $n->sub(Number::of($value - 1));
-            $denominator = Number::of($value);
-            $result = $result->mul($numerator->div($denominator));
+        for ($value = Number::of(1); $value->compare($r) <= 0; $value = $value->add(1)) {
+            $numerator = $n->sub($value->sub(1));
+            $result = $result->mul($numerator)->div($value);
         }
 
         return $result;

@@ -16,7 +16,14 @@ final class Relation
      */
     private function __construct(array $pairs)
     {
-        $this->pairs = $pairs;
+        $uniquePairs = [];
+        foreach ($pairs as $pair) {
+            if (! $this->containsPair($uniquePairs, $pair)) {
+                $uniquePairs[] = $pair;
+            }
+        }
+
+        $this->pairs = $uniquePairs;
     }
 
     /**
@@ -30,7 +37,18 @@ final class Relation
     /** @param array{0:Number,1:Number} $pair */
     public function contains(array $pair): bool
     {
-        foreach ($this->pairs as $existing) {
+        return $this->containsPair($this->pairs, $pair);
+    }
+
+    public function count(): int
+    {
+        return count($this->pairs);
+    }
+
+    /** @param list<array{0:Number,1:Number}> $pairs */
+    private function containsPair(array $pairs, array $pair): bool
+    {
+        foreach ($pairs as $existing) {
             if ($existing[0]->compare($pair[0]) === 0 && $existing[1]->compare($pair[1]) === 0) {
                 return true;
             }

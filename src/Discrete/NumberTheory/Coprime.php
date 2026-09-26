@@ -14,10 +14,6 @@ final class Coprime
         self::assertInteger($a);
         self::assertInteger($b);
 
-        if ($a->compare(Number::of(0)) === 0 || $b->compare(Number::of(0)) === 0) {
-            return false;
-        }
-
         return GCD::of($a->abs(), $b->abs())->compare(Number::of(1)) === 0;
     }
 

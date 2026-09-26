@@ -40,6 +40,13 @@ final class NumberTheoryTest extends TestCase
         self::assertFalse(Coprime::of(Number::of(12), Number::of(18)));
         self::assertTrue(Coprime::of(Number::of(-8), Number::of(15)));
         self::assertFalse(Coprime::of(Number::of(0), Number::of(18)));
+        self::assertTrue(Coprime::of(Number::of(0), Number::of(1)));
+        self::assertTrue(Coprime::of(Number::of(0), Number::of(-1)));
+        self::assertTrue(Coprime::of(Number::of(1), Number::of(0)));
+        self::assertTrue(Coprime::of(Number::of(-1), Number::of(0)));
+        self::assertFalse(Coprime::of(Number::of(0), Number::of(0)));
+        self::assertFalse(Coprime::of(Number::of(0), Number::of(2)));
+        self::assertFalse(Coprime::of(Number::of(2), Number::of(0)));
     }
 
     public function testDivisibilityAndRemainder(): void
@@ -59,6 +66,9 @@ final class NumberTheoryTest extends TestCase
         self::assertTrue(Prime::isPrime(Number::of(13)));
         self::assertFalse(Prime::isPrime(Number::of(1)));
         self::assertFalse(Prime::isPrime(Number::of(9)));
+        self::assertSame('2', Prime::nextPrime(Number::of(1))->value());
+        self::assertSame('11', Prime::nextPrime(Number::of(7))->value());
+        self::assertSame('11', Prime::nextPrime(Number::of(8))->value());
         self::assertSame('11', Prime::nextPrime(Number::of(10))->value());
         self::assertSame('1', IntegerSquareRoot::of(Number::of(2))->value());
 
@@ -80,18 +90,54 @@ final class NumberTheoryTest extends TestCase
         self::assertSame('10', ModularArithmetic::subtract(Number::of(7), Number::of(9), Number::of(12))->value());
         self::assertSame('3', ModularArithmetic::multiply(Number::of(7), Number::of(9), Number::of(12))->value());
         self::assertSame('5', ModularArithmetic::power(Number::of(3), Number::of(5), Number::of(7))->value());
+        self::assertSame(
+            '1',
+            ModularArithmetic::power(
+                Number::of(3),
+                Number::of('100000000000000000000'),
+                Number::of(11),
+            )->value(),
+        );
+        self::assertSame(
+            '1024',
+            ModularArithmetic::power(
+                Number::of(-2),
+                Number::of(10),
+                Number::of('100000000000000000039'),
+            )->value(),
+        );
 
         self::assertSame('5', ModularInverse::of(Number::of(3), Number::of(7))->value());
         self::assertSame('12', ModularInverse::of(Number::of(10), Number::of(17))->value());
+        self::assertSame('4', ModularInverse::of(Number::of(3), Number::of(11))->value());
+        self::assertSame('7', ModularInverse::of(Number::of(-3), Number::of(11))->value());
+        self::assertSame('1', ModularInverse::of(Number::of(1), Number::of(11))->value());
+        self::assertSame('10', ModularInverse::of(Number::of(-1), Number::of(11))->value());
+    }
+
+    public function testModularInverseRejectsNonInvertibleInputs(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        ModularInverse::of(Number::of(6), Number::of(15));
     }
 
     public function testIntegerSquareRootAndEulerTotient(): void
     {
         self::assertSame('0', IntegerSquareRoot::of(Number::of(0))->value());
         self::assertSame('1', IntegerSquareRoot::of(Number::of(1))->value());
+        self::assertSame('4', IntegerSquareRoot::of(Number::of(16))->value());
         self::assertSame('3', IntegerSquareRoot::of(Number::of(9))->value());
         self::assertSame('9', IntegerSquareRoot::of(Number::of(81))->value());
         self::assertSame('8', IntegerSquareRoot::of(Number::of(80))->value());
+        self::assertSame(
+            '100000000000000000000',
+            IntegerSquareRoot::of(Number::of('10000000000000000000000000000000000000000'))->value(),
+        );
+        self::assertSame(
+            '100000000000000000000',
+            IntegerSquareRoot::of(Number::of('10000000000000000000000000000000000000001'))->value(),
+        );
         self::assertSame('1', EulerTotient::of(Number::of(1))->value());
         self::assertSame('4', EulerTotient::of(Number::of(5))->value());
         self::assertSame('12', EulerTotient::of(Number::of(13))->value());

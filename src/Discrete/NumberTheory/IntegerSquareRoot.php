@@ -25,13 +25,8 @@ final class IntegerSquareRoot
         $high = $n;
 
         while ($low->compare($high) < 0) {
-            $mid = Number::of(
-                (string) (int) bcdiv(
-                    $low->add($high)->value(),
-                    '2',
-                    0
-                )
-            );
+            $sum = $low->add($high);
+            $mid = $sum->sub($sum->mod(2))->div(2);
             $square = $mid->mul($mid);
 
             if ($square->compare($n) <= 0) {

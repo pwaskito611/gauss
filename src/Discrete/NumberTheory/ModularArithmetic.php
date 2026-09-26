@@ -41,7 +41,7 @@ final class ModularArithmetic
         while ($power->compare(Number::of(0)) > 0) {
             if ($power->mod(2)->compare(Number::of(0)) === 0) {
                 $base = self::normalize($base->mul($base), $modulus);
-                $power = Number::of((string) (int) bcdiv($power->value(), '2', 0));
+                $power = $power->sub($power->mod(2))->div(2);
             } else {
                 $result = self::normalize($result->mul($base), $modulus);
                 $power = $power->sub(1);

@@ -14,11 +14,10 @@ final class Permutation
         self::assertValidRange($n, $r);
 
         $result = Number::of(1);
-        $upper = (int) $n->value();
-        $count = (int) $r->value();
+        $value = $n->sub($r)->add(1);
 
-        for ($value = $upper - $count + 1; $value <= $upper; $value++) {
-            $result = $result->mul(Number::of($value));
+        for (; $value->compare($n) <= 0; $value = $value->add(1)) {
+            $result = $result->mul($value);
         }
 
         return $result;

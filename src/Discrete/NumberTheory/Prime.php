@@ -43,14 +43,9 @@ final class Prime
             return Number::of(2);
         }
 
-        $candidate = $n->compare(Number::of(2)) === 0 ? Number::of(2) : $n;
-        if ($candidate->compare(Number::of(2)) === 0) {
-            return Number::of(2);
-        }
-
-        if ($candidate->mod(2)->compare(Number::of(0)) === 0) {
-            $candidate = $candidate->add(1);
-        }
+        $candidate = $n->compare(Number::of(2)) === 0
+            ? Number::of(3)
+            : $n->add($n->mod(2)->compare(Number::of(0)) === 0 ? 1 : 2);
 
         while (! self::isPrime($candidate)) {
             $candidate = $candidate->add(2);

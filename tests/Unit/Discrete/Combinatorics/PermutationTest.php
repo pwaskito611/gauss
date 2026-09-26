@@ -15,6 +15,11 @@ final class PermutationTest extends TestCase
     {
         self::assertSame('20', Permutation::of(Number::of(5), Number::of(2))->value());
         self::assertSame('120', Permutation::of(Number::of(5), Number::of(5))->value());
+        self::assertSame('720', Permutation::of(Number::of(10), Number::of(3))->value());
+        self::assertSame(
+            '9999999999999999999900000000000000000000',
+            Permutation::of(Number::of('100000000000000000000'), Number::of(2))->value(),
+        );
     }
 
     public function testRejectsInvalidRange(): void

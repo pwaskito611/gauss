@@ -18,8 +18,8 @@ final class Factorial
         }
 
         $result = Number::of(1);
-        for ($value = 2; $value <= (int) $n->value(); $value++) {
-            $result = $result->mul(Number::of($value));
+        for ($value = Number::of(2); $value->compare($n) <= 0; $value = $value->add(1)) {
+            $result = $result->mul($value);
         }
 
         return $result;

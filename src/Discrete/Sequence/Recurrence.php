@@ -22,8 +22,8 @@ final class Recurrence
      */
     private function __construct(array $initialValues, callable $rule)
     {
-        if ($initialValues === []) {
-            throw new InvalidArgumentException('Recurrence needs at least one initial value.');
+        if (count($initialValues) !== 2) {
+            throw new InvalidArgumentException('Second-order recurrence requires exactly two initial values.');
         }
 
         $this->initialValues = $initialValues;
@@ -46,29 +46,27 @@ final class Recurrence
 
     public function at(Number $n): Number
     {
+        if (! preg_match('/^\d+$/', $n->value())) {
+            throw new InvalidArgumentException('Sequence index must be an integer.');
+        }
+
         if ($n->compare(Number::of(1)) < 0) {
             throw new InvalidArgumentException('Sequence index must be at least 1.');
         }
 
-        if (count($this->initialValues) < 2) {
-            throw new InvalidArgumentException('Recurrence requires at least two initial values.');
-        }
-
-        if ($n->compare(Number::of(count($this->initialValues))) <= 0) {
-            return $this->initialValues[(int) $n->value() - 1];
+        if ($n->compare(Number::of(2)) <= 0) {
+            return $this->initialValues[$n->compare(Number::of(1)) === 0 ? 0 : 1];
         }
 
         $values = $this->initialValues;
-        $index = Number::of(count($values));
-        while ($index->compare($n) < 0) {
+        while (Number::of(count($values))->compare($n) < 0) {
             $next = ($this->rule)(
                 $values[count($values) - 1],
                 $values[count($values) - 2]
             );
             $values[] = $next;
-            $index = $index->add(1);
         }
 
-        return $values[(int) $n->value() - 1];
+        return $values[count($values) - 1];
     }
 }
