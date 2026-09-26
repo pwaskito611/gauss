@@ -1,6 +1,6 @@
 {
     "name": "pandu/gauss",
-    "description": "A composable mathematical library for PHP.",
+    "description": "A precise and composable mathematical toolkit for PHP, built from reusable mathematical primitives for constructing reliable mathematical models.",
     "type": "library",
     "license": "MIT",
     "require": {
