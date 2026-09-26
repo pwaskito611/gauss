@@ -138,12 +138,11 @@ final class AR
         $residuals = [];
         $values = $this->series->values();
 
-        foreach ($values as $index => $value) {
+        for ($index = $this->order; $index < count($values); $index++) {
+            $value = $values[$index];
             $fitted = $this->intercept;
             for ($lag = 1; $lag <= $this->order; $lag++) {
-                if ($index - $lag >= 0) {
-                    $fitted = $fitted->add($this->coefficients[$lag - 1]->mul($values[$index - $lag]));
-                }
+                $fitted = $fitted->add($this->coefficients[$lag - 1]->mul($values[$index - $lag]));
             }
             $residuals[] = $value->sub($fitted);
         }

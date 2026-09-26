@@ -52,7 +52,7 @@ final class MA
             $residuals[$index] = $value->sub($mean);
         }
 
-        for ($iteration = 0; $iteration < 10; $iteration++) {
+        for ($iteration = 0; $iteration < self::MAX_ITERATIONS; $iteration++) {
             $rows = [];
             $targets = [];
 
@@ -124,19 +124,22 @@ final class MA
             }
 
             $coefficients = $nextCoefficients;
+            $previousResiduals = $residuals;
+            $nextResiduals = [];
             foreach ($values as $index => $value) {
                 $residual = self::limitPrecision($value->sub($mean));
                 for ($lag = 1; $lag <= $order; $lag++) {
                     if ($index - $lag >= 0) {
                         $residual = self::limitPrecision(
                             $residual->sub(
-                                $coefficients[$lag - 1]->mul($residuals[$index - $lag])
+                                $coefficients[$lag - 1]->mul($previousResiduals[$index - $lag])
                             )
                         );
                     }
                 }
-                $residuals[$index] = $residual;
+                $nextResiduals[$index] = $residual;
             }
+            $residuals = $nextResiduals;
 
             if ($converged) {
                 break;

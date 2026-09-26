@@ -112,9 +112,13 @@ final class TimeSeries
             throw new InvalidArgumentException('Lag must be non-negative.');
         }
 
+        if ($lag >= $this->count()) {
+            throw new InvalidArgumentException('Lag must be smaller than the number of observations.');
+        }
+
         $values = [];
-        for ($index = 0; $index < $this->count(); $index++) {
-            $values[] = $index < $lag ? Number::of(0) : $this->observations[$index - $lag]->value();
+        for ($index = $lag; $index < $this->count(); $index++) {
+            $values[] = $this->observations[$index - $lag]->value();
         }
 
         return new self($values);
@@ -128,7 +132,11 @@ final class TimeSeries
 
         $series = $this;
         for ($iteration = 0; $iteration < $order; $iteration++) {
-            $values = [$series->observations[0]->value()->sub($series->observations[0]->value())];
+            if ($series->count() < 2) {
+                throw new InvalidArgumentException('Difference order must be smaller than the number of observations.');
+            }
+
+            $values = [];
             for ($index = 1; $index < $series->count(); $index++) {
                 $values[] = $series->observations[$index]->value()->sub($series->observations[$index - 1]->value());
             }
@@ -211,6 +219,11 @@ final class TimeSeries
         }
 
         $values = $this->values();
+        $mean = Statistics::mean($values);
+        $centered = array_map(
+            static fn (Number $value): Number => $value->sub($mean),
+            $values,
+        );
         if ($this->count() <= $lag) {
             throw new InvalidArgumentException('PACF requires enough observations for the requested lag.');
         }
@@ -218,10 +231,10 @@ final class TimeSeries
         $y = [];
         $design = [];
         for ($index = $lag; $index < $this->count(); $index++) {
-            $y[] = $values[$index];
+            $y[] = $centered[$index];
             $row = [];
             for ($offset = 1; $offset <= $lag; $offset++) {
-                $row[] = $values[$index - $offset];
+                $row[] = $centered[$index - $offset];
             }
             $design[] = $row;
         }

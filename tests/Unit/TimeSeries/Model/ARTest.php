@@ -37,6 +37,24 @@ final class ARTest extends TestCase
         self::assertNotSame($modelA->coefficients()[0]->value(), $modelB->coefficients()[0]->value());
     }
 
+    public function testArResidualsStartOnlyAfterAllLagsAreAvailable(): void
+    {
+        $series = TimeSeries::of([1, 4, 2, 8, 3, 9, 0, 7, 2, 5]);
+        $model = AR::fit($series, 2);
+        $residuals = $model->residuals();
+
+        self::assertSame(8, $residuals->count());
+        self::assertSame(
+            0,
+            $residuals->valueAt(0)->compare(
+                $series->valueAt(2)
+                    ->sub($model->intercept())
+                    ->sub($model->coefficients()[0]->mul($series->valueAt(1)))
+                    ->sub($model->coefficients()[1]->mul($series->valueAt(0)))
+            ),
+        );
+    }
+
     public function testArRejectsInvalidOrder(): void
     {
         $this->expectException(InvalidArgumentException::class);
