@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit bootstrap="vendor/autoload.php" cacheDirectory=".phpunit.cache">
+    <testsuites>
+        <testsuite name="Unit">
+            <directory suffix="Test.php">tests/Unit/Number</directory>
+            <directory suffix="Test.php">tests/Unit/Algebra</directory>
+            <directory suffix="Test.php">tests/Unit/Linear</directory>
+            <directory suffix="Test.php">tests/Unit/Geometry</directory>
+            <directory suffix="Test.php">tests/Unit/Statistics</directory>
+            <directory suffix="Test.php">tests/Unit/Probability</directory>
+            <directory suffix="Test.php">tests/Unit/Distribution</directory>
+            <directory suffix="Test.php">tests/Unit/Numerical</directory>
+            <directory suffix="Test.php">tests/Unit/Optimization</directory>
+            <directory suffix="Test.php">tests/Unit/TimeSeries</directory>
+            <directory suffix="Test.php">tests/Unit/Discrete</directory>
+        </testsuite>
+        <testsuite name="Feature">
+            <directory suffix="Test.php">tests/Feature</directory>
+        </testsuite>
+        <testsuite name="Integration">
+            <directory suffix="Test.php">tests/Integration</directory>
+        </testsuite>
+    </testsuites>
+</phpunit>
