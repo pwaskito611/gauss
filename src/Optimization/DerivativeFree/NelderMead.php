@@ -6,6 +6,7 @@ namespace Gauss\Optimization\DerivativeFree;
 
 use Gauss\Linear\Vector;
 use Gauss\Number\Number;
+use Gauss\Optimization\Constraint\BoxConstraint;
 use Gauss\Optimization\OptimizationResult;
 use InvalidArgumentException;
 
@@ -18,27 +19,31 @@ final class NelderMead
     /**
      * @param callable(Vector): Number $objective
      * @param list<Vector> $simplex
+        * @param BoxConstraint|null $bounds Rejects any generated point outside these bounds.
      */
     public static function minimize(
         callable $objective,
         array $simplex,
         int|float|string|Number $tolerance = '0.000001',
         int $maxIterations = 500,
+        ?BoxConstraint $bounds = null,
     ): OptimizationResult {
-        return self::optimize($objective, $simplex, $tolerance, $maxIterations, false);
+        return self::optimize($objective, $simplex, $tolerance, $maxIterations, false, $bounds);
     }
 
     /**
      * @param callable(Vector): Number $objective
      * @param list<Vector> $simplex
+        * @param BoxConstraint|null $bounds Rejects any generated point outside these bounds.
      */
     public static function maximize(
         callable $objective,
         array $simplex,
         int|float|string|Number $tolerance = '0.000001',
         int $maxIterations = 500,
+        ?BoxConstraint $bounds = null,
     ): OptimizationResult {
-        return self::optimize($objective, $simplex, $tolerance, $maxIterations, true);
+        return self::optimize($objective, $simplex, $tolerance, $maxIterations, true, $bounds);
     }
 
     /**
@@ -51,6 +56,7 @@ final class NelderMead
         int|float|string|Number $tolerance,
         int $maxIterations,
         bool $maximize,
+        ?BoxConstraint $bounds,
     ): OptimizationResult {
         if ($simplex === []) {
             throw new InvalidArgumentException('Simplex must contain at least one point.');
@@ -75,6 +81,34 @@ final class NelderMead
             throw new InvalidArgumentException('Simplex points must define a valid vector dimension.');
         }
 
+        if (count($simplex) !== $dimension + 1) {
+            throw new InvalidArgumentException('Nelder-Mead requires exactly dimension + 1 simplex points.');
+        }
+
+        if ($bounds !== null && $bounds->dimension() !== $dimension) {
+            throw new InvalidArgumentException('Simplex and bounds must have the same dimension.');
+        }
+
+        foreach ($simplex as $index => $point) {
+            if ($bounds !== null && ! $bounds->contains($point)) {
+                throw new InvalidArgumentException('Every simplex point must be inside the supplied bounds.');
+            }
+
+            foreach (array_slice($simplex, 0, $index) as $previousPoint) {
+                $identical = true;
+                foreach (range(0, $dimension - 1) as $coordinate) {
+                    if ($point->get($coordinate)->compare($previousPoint->get($coordinate)) !== 0) {
+                        $identical = false;
+                        break;
+                    }
+                }
+
+                if ($identical) {
+                    throw new InvalidArgumentException('Simplex vertices must be distinct.');
+                }
+            }
+        }
+
         $tol = Number::of($tolerance);
         if ($tol->compare(0) <= 0) {
             throw new InvalidArgumentException('Tolerance must be positive.');
@@ -87,7 +121,7 @@ final class NelderMead
         $points = $simplex;
         $values = [];
         foreach ($points as $point) {
-            $values[] = self::evaluate($objective, $point, $maximize);
+            $values[] = self::evaluate($objective, $point, $maximize, $bounds);
         }
 
         for ($iteration = 0; $iteration < $maxIterations; $iteration++) {
@@ -97,11 +131,11 @@ final class NelderMead
             $centroid = self::centroid($points, $worstIndex);
 
             $reflection = $centroid->add($centroid->sub($points[$worstIndex])->scale(Number::of(1)));
-            $reflectionValue = self::evaluate($objective, $reflection, $maximize);
+            $reflectionValue = self::evaluate($objective, $reflection, $maximize, $bounds);
 
             if ($reflectionValue->compare($values[$bestIndex]) < 0) {
                 $expansion = $centroid->add($reflection->sub($centroid)->scale(Number::of(2)));
-                $expansionValue = self::evaluate($objective, $expansion, $maximize);
+                $expansionValue = self::evaluate($objective, $expansion, $maximize, $bounds);
 
                 if ($expansionValue->compare($reflectionValue) < 0) {
                     $points[$worstIndex] = $expansion;
@@ -114,15 +148,16 @@ final class NelderMead
                 $points[$worstIndex] = $reflection;
                 $values[$worstIndex] = $reflectionValue;
             } else {
-                if ($reflectionValue->compare($values[$worstIndex]) < 0) {
-                    $points[$worstIndex] = $reflection;
-                    $values[$worstIndex] = $reflectionValue;
-                }
+                $outsideContraction = $reflectionValue->compare($values[$worstIndex]) < 0;
+                $contractionBase = $outsideContraction ? $reflection : $points[$worstIndex];
+                $contraction = $centroid->add($contractionBase->sub($centroid)->scale(Number::of('0.5')));
+                $contractionValue = self::evaluate($objective, $contraction, $maximize, $bounds);
 
-                $contraction = $centroid->add($points[$worstIndex]->sub($centroid)->scale(Number::of('0.5')));
-                $contractionValue = self::evaluate($objective, $contraction, $maximize);
+                $contractionThreshold = $outsideContraction
+                    ? $reflectionValue
+                    : $values[$worstIndex];
 
-                if ($contractionValue->compare($values[$worstIndex]) < 0) {
+                if ($contractionValue->compare($contractionThreshold) < 0) {
                     $points[$worstIndex] = $contraction;
                     $values[$worstIndex] = $contractionValue;
                 } else {
@@ -133,7 +168,7 @@ final class NelderMead
                         }
 
                         $points[$index] = $bestPoint->add($point->sub($bestPoint)->scale(Number::of('0.5')));
-                        $values[$index] = self::evaluate($objective, $points[$index], $maximize);
+                        $values[$index] = self::evaluate($objective, $points[$index], $maximize, $bounds);
                     }
                 }
             }
@@ -158,21 +193,30 @@ final class NelderMead
                 $bestPoint = $points[$bestIndex];
                 $bestValue = $values[$bestIndex];
 
-                return new OptimizationResult($bestPoint, $bestValue, $iteration + 1, true);
+                return new OptimizationResult($bestPoint, self::originalValue($bestValue, $maximize), $iteration + 1, true);
             }
         }
 
         $bestIndex = self::argmin($values);
-        return new OptimizationResult($points[$bestIndex], $values[$bestIndex], $maxIterations, false);
+        return new OptimizationResult($points[$bestIndex], self::originalValue($values[$bestIndex], $maximize), $maxIterations, false);
     }
 
     /**
      * @param callable(Vector): Number $objective
      */
-    private static function evaluate(callable $objective, Vector $point, bool $maximize): Number
+    private static function evaluate(callable $objective, Vector $point, bool $maximize, ?BoxConstraint $bounds): Number
     {
+        if ($bounds !== null && ! $bounds->contains($point)) {
+            throw new InvalidArgumentException('Nelder-Mead generated a candidate outside the supplied bounds.');
+        }
+
         $value = Number::of($objective($point));
 
+        return $maximize ? $value->mul(-1) : $value;
+    }
+
+    private static function originalValue(Number $value, bool $maximize): Number
+    {
         return $maximize ? $value->mul(-1) : $value;
     }
 

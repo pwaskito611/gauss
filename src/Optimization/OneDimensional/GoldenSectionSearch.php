@@ -86,7 +86,7 @@ final class GoldenSectionSearch
 
         for ($iteration = 0; $iteration < $maxIterations; $iteration++) {
             if ($b->sub($a)->abs()->compare($tol) <= 0) {
-                return new OptimizationResult($bestPoint, $bestValue, $iteration, true);
+                return new OptimizationResult($bestPoint, self::originalValue($bestValue, $maximize), $iteration, true);
             }
 
             if ($fc->compare($fd) <= 0) {
@@ -114,7 +114,12 @@ final class GoldenSectionSearch
             }
         }
 
-        return new OptimizationResult($bestPoint, $bestValue, $maxIterations, $b->sub($a)->abs()->compare($tol) <= 0);
+        return new OptimizationResult(
+            $bestPoint,
+            self::originalValue($bestValue, $maximize),
+            $maxIterations,
+            $b->sub($a)->abs()->compare($tol) <= 0,
+        );
     }
 
     /**
@@ -124,6 +129,11 @@ final class GoldenSectionSearch
     {
         $value = Number::of($objective($point));
 
+        return $maximize ? $value->mul(-1) : $value;
+    }
+
+    private static function originalValue(Number $value, bool $maximize): Number
+    {
         return $maximize ? $value->mul(-1) : $value;
     }
 }
