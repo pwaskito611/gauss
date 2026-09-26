@@ -199,6 +199,13 @@ final class NumericalTest extends TestCase
         self::assertSame(0, $value->compare(2));
     }
 
+    public function testLinearInterpolationRejectsDuplicateXValues(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        LinearInterpolation::interpolate(1, 2, 1, 3, 1.5);
+    }
+
     public function testLagrangeInterpolationEvaluatesPolynomial(): void
     {
         $value = LagrangeInterpolation::interpolate(
@@ -223,6 +230,56 @@ final class NumericalTest extends TestCase
                 [Number::of(0), Number::of(1)],
             ],
             Number::of(1),
+        );
+    }
+
+    public function testLagrangeInterpolationRejectsDuplicateDecimalXValues(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        LagrangeInterpolation::interpolate(
+            [[1.5, 2], [1.5, 3]],
+            2,
+        );
+    }
+
+    public function testLagrangeInterpolationAllowsDistinctDecimalXValues(): void
+    {
+        $value = LagrangeInterpolation::interpolate(
+            [[1.2, 2], [1.8, 3]],
+            1.5,
+        );
+
+        self::assertSame(0, $value->compare('2.5'));
+    }
+
+    public function testLagrangeInterpolationRejectsNumericallyEquivalentXRepresentations(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        LagrangeInterpolation::interpolate(
+            [[1, 2], ['1.0', 3]],
+            2,
+        );
+    }
+
+    public function testLagrangeInterpolationEvaluatesSeveralValidPoints(): void
+    {
+        $value = LagrangeInterpolation::interpolate(
+            [[0, 1], [1, 3], [2, 7]],
+            3,
+        );
+
+        self::assertSame(0, $value->compare(13));
+    }
+
+    public function testLagrangeInterpolationRejectsDuplicateXValuesInMiddleOfDataset(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        LagrangeInterpolation::interpolate(
+            [[0, 1], [1, 3], [2, 7], [1, 4]],
+            3,
         );
     }
 }

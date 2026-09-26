@@ -25,15 +25,16 @@ final class LagrangeInterpolation
         $target = Number::of($x);
         $seenX = [];
 
-        foreach ($points as [$pointX, $pointY]) {
+        foreach ($points as [$pointX]) {
             $xValue = Number::of($pointX);
-            $yValue = Number::of($pointY);
 
-            if (isset($seenX[$xValue->value()])) {
-                throw new InvalidArgumentException('Duplicate x-values are not allowed in interpolation.');
+            foreach ($seenX as $seenValue) {
+                if ($xValue->compare($seenValue) === 0) {
+                    throw new InvalidArgumentException('Duplicate x-values are not allowed in interpolation.');
+                }
             }
 
-            $seenX[$xValue->value()] = true;
+            $seenX[] = $xValue;
         }
 
         $result = Number::of(0);
