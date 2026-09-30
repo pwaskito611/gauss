@@ -2,38 +2,61 @@
 
 ## Purpose
 
-The numerical module in Gauss contains methods and structures that operate on numeric and optimization workflows using the project’s `Number` primitive.
+The numerical module contains reusable root-finding, interpolation, differentiation, and integration routines that operate on Gauss's `Number` values. These are practical algorithms for solving small numerical problems without leaving the library's type system.
 
-## Core concepts
+## Core routines
 
-The numerical layer relies on:
+- `Gauss\Numerical\Root\Bisection`
+- `Gauss\Numerical\Root\NewtonRaphson`
+- `Gauss\Numerical\Root\Secant`
+- `Gauss\Numerical\Interpolation\LinearInterpolation`
+- `Gauss\Numerical\Integration\TrapezoidalRule`
+- `Gauss\Numerical\Integration\SimpsonRule`
+- `Gauss\Numerical\Differentiation\ForwardDifference`
+- `Gauss\Numerical\Differentiation\CentralDifference`
 
-- exact arithmetic via `Number`
-- vectors and matrices for computational state
-- reusable solver and optimization patterns
-
-## Basic usage
-
-This module is primarily used together with linear and optimization primitives, rather than as a standalone self-contained framework.
+## Root finding with bisection
 
 ```php
 <?php
 
 require_once __DIR__ . '/vendor/autoload.php';
 
-use Gauss\Linear\Vector;
 use Gauss\Number\Number;
+use Gauss\Numerical\Root\Bisection;
 
-$point = Vector::of(2, 3);
-$scale = Number::of('2');
-$scaled = $point->scale($scale);
+$root = Bisection::solve(
+    static fn (Number $x): Number => $x->pow(2)->sub(Number::of(2)),
+    1,
+    2,
+    '0.000001',
+    1000,
+);
 
-print_r(array_map(static fn($value) => $value->value(), $scaled->values()));
+echo $root->value() . PHP_EOL; // approximately 1.41421356...
 ```
 
-## Composition
+`Bisection::solve()` expects a callable returning a `Number`, a bracketing interval, and a tolerance. The function must change sign across the interval.
 
-The numerical layer is best understood as a collection of computational routines that work with Gauss’s value objects rather than as a separate numeric universe.
+## Numerical integration
+
+```php
+<?php
+
+use Gauss\Number\Number;
+use Gauss\Numerical\Integration\TrapezoidalRule;
+
+$integral = TrapezoidalRule::integrate(
+    static fn (Number $x): Number => $x->pow(2),
+    0,
+    1,
+    100,
+);
+
+echo $integral->value() . PHP_EOL;
+```
+
+Integration routines work directly with callables and `Number` inputs. The same pattern applies to Simpson's rule and finite-difference approximations.
 
 ## Related modules
 

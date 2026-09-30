@@ -2,37 +2,60 @@
 
 ## Purpose
 
-The optimization module is for objective-driven search and parameter fitting using Gauss’s numeric primitives.
+The optimization module contains search routines for minimizing or maximizing scalar objectives over a bounded interval or vector space. Output is wrapped in `OptimizationResult`, which contains the best point found, the objective value, iteration count, and success flag.
 
 ## Core types
 
 - `Gauss\Optimization\OptimizationResult`
-- optimization algorithms under `src/Optimization`
+- `Gauss\Optimization\OneDimensional\GoldenSectionSearch`
+- `Gauss\Optimization\Multidimensional\GradientDescent`
+- `Gauss\Optimization\Multidimensional\CoordinateDescent`
+- `Gauss\Optimization\DerivativeFree\NelderMead`
 
-## Basic usage
+## One-dimensional optimization
 
 ```php
 <?php
 
 require_once __DIR__ . '/vendor/autoload.php';
 
-use Gauss\Linear\Vector;
-use Gauss\Optimization\OptimizationResult;
 use Gauss\Number\Number;
+use Gauss\Optimization\OneDimensional\GoldenSectionSearch;
 
-$result = new OptimizationResult(
-    Vector::of(1, 2),
-    Number::of('3.5'),
-    12,
-    true
+$result = GoldenSectionSearch::minimize(
+    static fn (Number $x): Number => $x->pow(2)->add(Number::of(1)),
+    -10,
+    10,
+    '0.000001',
+    1000,
 );
 
-echo $result->value()->value();
+echo $result->point()->value() . PHP_EOL;
+echo $result->value()->value() . PHP_EOL;
 ```
 
-## Composition
+`GoldenSectionSearch::minimize()` and `maximize()` accept a callable objective and a search interval. They return an `OptimizationResult` with the best point and the corresponding objective value.
 
-Optimization operates naturally on `Vector`-based inputs and `Number`-based objective values. This makes it useful for custom numerical modelling tasks.
+## Multidimensional optimization
+
+```php
+<?php
+
+use Gauss\Linear\Vector;
+use Gauss\Optimization\Multidimensional\GradientDescent;
+
+$result = GradientDescent::minimize(
+    static fn (Vector $x): \Gauss\Number\Number => $x->get(0)->pow(2)->add($x->get(1)->pow(2)),
+    Vector::of(3, 3),
+    '0.1',
+    '0.000001',
+    500,
+);
+
+echo $result->point()->get(0)->value() . PHP_EOL;
+```
+
+`GradientDescent` works with a vector-valued input and a callable that returns a scalar `Number`. The key parameters are the initial point, learning rate, tolerance, and iteration limit.
 
 ## Related modules
 
