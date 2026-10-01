@@ -45,6 +45,17 @@ final class GeometryTest extends TestCase
         self::assertSame(['3', '4'], $this->pointValues($segment->midpoint()));
     }
 
+    public function testSegmentContainsEndpointsInteriorAndOnlyCollinearPoints(): void
+    {
+        $segment = Segment::between(Point::of(0, 0), Point::of(4, 0));
+
+        self::assertTrue($segment->contains(Point::of(0, 0)));
+        self::assertTrue($segment->contains(Point::of(4, 0)));
+        self::assertTrue($segment->contains(Point::of(2, 0)));
+        self::assertFalse($segment->contains(Point::of(5, 0)));
+        self::assertFalse($segment->contains(Point::of(2, 1)));
+    }
+
     public function testCircleAreaCircumferenceAndContainment(): void
     {
         $circle = Circle::of(Point::of(0, 0), Number::of(3));

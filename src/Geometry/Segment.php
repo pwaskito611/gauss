@@ -6,6 +6,7 @@ namespace Gauss\Geometry;
 
 use Gauss\Linear\Vector;
 use Gauss\Number\Number;
+use LogicException;
 
 final class Segment
 {
@@ -62,9 +63,12 @@ final class Segment
 
         $dot = $relative->dot($direction);
         $lengthSquared = $direction->dot($direction);
-        $sample = $direction->get(0);
-        $zero = $sample->sub($sample);
-        $one = $sample->one();
+        $zero = Number::of(0);
+        $one = Number::of(1);
+
+        if ($lengthSquared->compare($zero) === 0) {
+            throw new LogicException('Segment direction has zero self-dot-product; containment is undefined.');
+        }
 
         $parameter = $dot->div($lengthSquared);
 

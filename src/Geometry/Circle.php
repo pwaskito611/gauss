@@ -19,7 +19,7 @@ final class Circle
         private readonly Point $center,
         private readonly Number $radius,
     ) {
-        if ($radius->compare($radius->sub($radius)) < 0) {
+        if ($radius->compare(Number::of(0)) < 0) {
             throw new InvalidArgumentException('Circle radius must be non-negative.');
         }
     }
@@ -52,9 +52,7 @@ final class Circle
      */
     public function circumference(): Number
     {
-        $two = $this->radius->one()->add($this->radius->one());
-
-        return $this->radius->mul($two)->mul(Number::pi());
+        return Number::of(2)->mul(Number::pi())->mul($this->radius);
     }
 
     /**

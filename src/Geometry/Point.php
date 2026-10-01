@@ -50,10 +50,9 @@ final class Point
      */
     public function midpoint(self $other): self
     {
-        $sample = $this->coordinates->get(0);
-        $one = $sample->one();
-        $two = $one->add($one);
-        $zero = $sample->sub($sample);
+        $one = Number::of(1);
+        $two = Number::of(2);
+        $zero = Number::of(0);
         if ($two->compare($zero) === 0) {
             throw new LogicException('Midpoint is undefined in characteristic 2.');
         }

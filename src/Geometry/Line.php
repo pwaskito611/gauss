@@ -48,8 +48,7 @@ final class Line
     {
         $relative = $point->coordinates()->sub($this->point->coordinates());
         $denominator = $this->direction->dot($this->direction);
-        $sample = $this->direction->get(0);
-        $zero = $sample->sub($sample);
+        $zero = Number::of(0);
 
         if ($denominator->compare($zero) === 0) {
             throw new LogicException('Line direction has zero self-dot-product; projection is undefined.');
@@ -79,7 +78,7 @@ final class Line
         }
 
         $determinant = self::determinant2D($this->direction, $other->direction);
-        if ($determinant->compare($determinant->sub($determinant)) === 0) {
+        if ($determinant->compare(Number::of(0)) === 0) {
             throw new LogicException('Lines are parallel (or coincident) and do not intersect at a unique point.');
         }
 
