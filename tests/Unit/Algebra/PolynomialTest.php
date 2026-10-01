@@ -31,6 +31,21 @@ final class PolynomialTest extends TestCase
         self::assertFalse($polynomial->isConstant());
     }
 
+    public function testDegreePreservesCanonicalZeroAndPolynomialDegrees(): void
+    {
+        self::assertSame(0, Polynomial::zero(Number::of(0))->degree());
+        self::assertSame(0, Polynomial::constant(Number::of(7))->degree());
+        self::assertSame(1, Polynomial::of([1 => Number::of(1)])->degree());
+        self::assertSame(
+            2,
+            Polynomial::of([
+                0 => Number::of(1),
+                1 => Number::of(1),
+                2 => Number::of(1),
+            ])->degree()
+        );
+    }
+
     public function testFactoryNormalizesZeroCoefficients(): void
     {
         $polynomial = Polynomial::of([

@@ -181,20 +181,9 @@ final class Monomial
     /**
      * Build a Number representing integer $n, consistent with the coefficient.
      */
-    private function fromInt(int $n): Number
+    private static function fromInt(int $n): Number
     {
-        if ($n === 0) {
-            return $this->coefficient->sub($this->coefficient);
-        }
-
-        $one   = self::oneOf($this->coefficient);
-        $value = $one;
-
-        for ($i = 1; $i < $n; $i++) {
-            $value = $value->add($one);
-        }
-
-        return $value;
+        return Number::of($n);
     }
 
     private static function isZeroNumber(Number $value): bool

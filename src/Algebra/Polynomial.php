@@ -18,6 +18,7 @@ final class Polynomial
 {
     /** @var array<int, Number> degree => coefficient */
     private readonly array $coefficients;
+    private readonly int $degree;
 
     /** A Number representing 0, used for consistent zero handling. */
     private readonly Number $zero;
@@ -47,6 +48,7 @@ final class Polynomial
         }
 
         $this->coefficients = $normalized;
+        $this->degree = $normalized === [] ? 0 : (int) array_key_last($normalized);
     }
 
     // ------------------------------------------------------------------
@@ -102,14 +104,7 @@ final class Polynomial
 
     public function degree(): int
     {
-        if ($this->coefficients === []) {
-            // Public Gauss convention: zero polynomial keeps degree 0.
-            // This preserves backward compatibility while zero coefficients
-            // remain normalized away from the internal sparse representation.
-            return 0;
-        }
-
-        return max(array_keys($this->coefficients));
+        return $this->degree;
     }
 
     public function coefficient(int $degree): Number
@@ -267,21 +262,18 @@ final class Polynomial
             );
         }
 
-        $quotient  = self::zero($this->zero);
-        $remainder = $this;
+        $quotientCoefficients = [];
+        $remainderCoefficients = $this->coefficients;
+        $remainderDegree = $this->degree;
 
         $divisorDegree    = $divisor->degree();
         $divisorLeading   = $divisor->leadingCoefficient();
 
-        while (! $remainder->isZero()
-            && $remainder->degree() >= $divisorDegree
+        while ($remainderCoefficients !== []
+            && $remainderDegree >= $divisorDegree
         ) {
-            $remainderDegree  = $remainder->degree();
-            $remainderLeading = $remainder->leadingCoefficient();
-
+            $remainderLeading = $remainderCoefficients[$remainderDegree];
             $termDegree = $remainderDegree - $divisorDegree;
-
-            // coefficient = remainderLeading / divisorLeading
             $termCoefficient = $remainderLeading->div($divisorLeading);
 
             if (self::isZeroValue($termCoefficient)) {
@@ -290,19 +282,44 @@ final class Polynomial
                 );
             }
 
-            $term = new Polynomial(
-                [$termDegree => $termCoefficient],
-                $this->zero
-            );
+            $quotientCoefficients[$termDegree] = isset($quotientCoefficients[$termDegree])
+                ? $quotientCoefficients[$termDegree]->add($termCoefficient)
+                : $termCoefficient;
 
-            $nextRemainder = $remainder->sub($term->mul($divisor));
-            self::assertDivisionProgress($remainder, $nextRemainder, $remainderDegree);
+            foreach ($divisor->coefficients as $degree => $coefficient) {
+                $targetDegree = $termDegree + $degree;
+                $current = $remainderCoefficients[$targetDegree] ?? $this->zero;
+                $updated = $current->sub($termCoefficient->mul($coefficient));
 
-            $quotient  = $quotient->add($term);
-            $remainder = $nextRemainder;
+                if (self::isZeroValue($updated)) {
+                    unset($remainderCoefficients[$targetDegree]);
+                } else {
+                    $remainderCoefficients[$targetDegree] = $updated;
+                }
+            }
+
+            $nextRemainderDegree = $remainderDegree;
+
+            while (
+                $nextRemainderDegree >= 0
+                && !isset($remainderCoefficients[$nextRemainderDegree])
+            ) {
+                $nextRemainderDegree--;
+            }
+
+            if ($nextRemainderDegree >= $remainderDegree) {
+                throw new \RuntimeException(
+                    'Polynomial division cannot progress: the remainder degree did not decrease.'
+                );
+            }
+
+            $remainderDegree = $nextRemainderDegree;
         }
 
-        return new PolynomialDivision($quotient, $remainder);
+        return new PolynomialDivision(
+            new self($quotientCoefficients, $this->zero),
+            new self($remainderCoefficients, $this->zero)
+        );
     }
 
     // ------------------------------------------------------------------
@@ -372,22 +389,6 @@ final class Polynomial
     // Helpers
     // ------------------------------------------------------------------
 
-    private static function assertDivisionProgress(
-        Polynomial $currentRemainder,
-        Polynomial $nextRemainder,
-        int $currentDegree
-    ): void {
-        if ($nextRemainder->isZero()) {
-            return;
-        }
-
-        if ($nextRemainder->degree() >= $currentDegree) {
-            throw new \RuntimeException(
-                'Polynomial division cannot progress: the remainder degree did not decrease.'
-            );
-        }
-    }
-
     private static function isZeroValue(Number $value): bool
     {
         return $value->compare(0) === 0;
@@ -398,33 +399,7 @@ final class Polynomial
      */
     private function intValue(int $n): Number
     {
-        if ($n === 0) {
-            return $this->zero;
-        }
-
-        // Derive 1 from $this->zero:  1 = 0 / 0? No — 0/0 undefined.
-        // Use any non-zero coefficient if present.
-        $one = null;
-
-        foreach ($this->coefficients as $coefficient) {
-            if (! $this->isZeroValue($coefficient)) {
-                $one = $coefficient->div($coefficient);
-                break;
-            }
-        }
-
-        if ($one === null) {
-            // Polynomial is zero → no meaningful multiplier needed.
-            return $this->zero;
-        }
-
-        $value = $one;
-
-        for ($i = 1; $i < $n; $i++) {
-            $value = $value->add($one);
-        }
-
-        return $value;
+        return Number::of($n);
     }
 
     private static function oneOf(Number $reference): Number

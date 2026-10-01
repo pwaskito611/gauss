@@ -68,6 +68,31 @@ final class MonomialTest extends TestCase
         self::assertSame('decimal', $term->coefficient()->type());
     }
 
+    public function testCalculusConvertsIntegerDegreesDirectly(): void
+    {
+        foreach ([0, 1, 2, 10, 100, 10000] as $degree) {
+            $term = new Monomial(Number::of(2), $degree);
+            $derivative = $term->derivative();
+            $integral = $term->integral();
+
+            if ($degree === 0) {
+                self::assertSame('0', $derivative->coefficient()->value());
+            } else {
+                self::assertSame($degree - 1, $derivative->degree());
+                self::assertSame(
+                    Number::of(2)->mul($degree)->value(),
+                    $derivative->coefficient()->value()
+                );
+            }
+
+            self::assertSame($degree + 1, $integral->degree());
+            self::assertSame(
+                Number::of(2)->div($degree + 1)->value(),
+                $integral->coefficient()->value()
+            );
+        }
+    }
+
     public function testDifferentDegreesCannotBeAdded(): void
     {
         $this->expectException(InvalidArgumentException::class);

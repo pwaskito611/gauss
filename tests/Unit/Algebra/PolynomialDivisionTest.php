@@ -30,8 +30,41 @@ final class PolynomialDivisionTest extends TestCase
         $division = $dividend->divide($divisor);
 
         self::assertSame('1', $division->quotient()->coefficient(1)->value());
+        self::assertSame('-1', $division->quotient()->constantTerm()->value());
         self::assertSame('2', $division->remainder()->constantTerm()->value());
         self::assertSame(0, $division->remainder()->degree());
+
+        $reconstructed = $division->quotient()->mul($divisor)
+            ->add($division->remainder());
+        self::assertSame([0, 2], array_keys($reconstructed->coefficients()));
+        self::assertSame('1', $reconstructed->coefficient(0)->value());
+        self::assertSame('1', $reconstructed->coefficient(2)->value());
+    }
+
+    public function testDivisionByConstantAndNegativeCoefficients(): void
+    {
+        $constantDivision = Polynomial::of([
+            0 => Number::of(6),
+            1 => Number::of(4),
+            2 => Number::of(2),
+        ])->divide(Polynomial::constant(Number::of(2)));
+
+        self::assertSame('3', $constantDivision->quotient()->coefficient(0)->value());
+        self::assertSame('2', $constantDivision->quotient()->coefficient(1)->value());
+        self::assertSame('1', $constantDivision->quotient()->coefficient(2)->value());
+        self::assertTrue($constantDivision->remainder()->isZero());
+
+        $negativeDivision = Polynomial::of([
+            0 => Number::of(1),
+            2 => Number::of(-1),
+        ])->divide(Polynomial::of([
+            0 => Number::of(-1),
+            1 => Number::of(1),
+        ]));
+
+        self::assertSame('-1', $negativeDivision->quotient()->coefficient(0)->value());
+        self::assertSame('-1', $negativeDivision->quotient()->coefficient(1)->value());
+        self::assertTrue($negativeDivision->remainder()->isZero());
     }
 
     public function testDivisionByZeroPolynomialThrows(): void
@@ -97,16 +130,8 @@ final class PolynomialDivisionTest extends TestCase
     public function testDivisionFailsFastWhenLeadingTermDoesNotReduceRemainder(): void
     {
         $this->expectException(\RuntimeException::class);
-
-        $method = new \ReflectionMethod(Polynomial::class, 'assertDivisionProgress');
-        $method->setAccessible(true);
-
-        $method->invoke(
-            null,
-            Polynomial::of([1 => Number::of(5)]),
-            Polynomial::of([1 => Number::of(5)]),
-            1
-        );
+        Polynomial::of([1 => Number::of(1)])
+            ->divide(Polynomial::of([1 => Number::of(3)]));
     }
 
     public function testZeroDividendDivisionTerminatesAndReturnsCanonicalZero(): void
