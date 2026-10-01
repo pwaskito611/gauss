@@ -43,6 +43,40 @@ final class LinearSystemTest extends TestCase
         self::assertSame([1], $solution->freeColumns());
     }
 
+    public function testReducedPivotMetadataExcludesAugmentedRightHandSide(): void
+    {
+        $infinite = LinearSystem::of(
+            Matrix::of([[0, 1]]),
+            Vector::of(2)
+        )->solve();
+
+        self::assertInstanceOf(InfiniteSolutions::class, $infinite);
+        self::assertSame([0], $infinite->freeColumns());
+
+        $inconsistent = LinearSystem::of(
+            Matrix::of([[0, 0]]),
+            Vector::of(1)
+        )->solve();
+
+        self::assertInstanceOf(NoSolution::class, $inconsistent);
+    }
+
+    public function testRepeatedSolveReusesTheSameSystemState(): void
+    {
+        $system = LinearSystem::of(
+            Matrix::of([[2, 1], [1, 2]]),
+            Vector::of(5, 4)
+        );
+
+        $first = $system->solve();
+        $second = $system->solve();
+
+        self::assertInstanceOf(UniqueSolution::class, $first);
+        self::assertInstanceOf(UniqueSolution::class, $second);
+        self::assertSame(['2', '1'], $this->valuesOf($first->vector()));
+        self::assertSame($this->valuesOf($first->vector()), $this->valuesOf($second->vector()));
+    }
+
     public function testMatrixAndRhsDimensionsMustMatch(): void
     {
         $this->expectException(InvalidArgumentException::class);

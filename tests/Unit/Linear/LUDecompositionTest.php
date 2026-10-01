@@ -27,4 +27,21 @@ final class LUDecompositionTest extends TestCase
 
         self::assertSame(['1', '2'], array_map(static fn ($value): string => $value->value(), $solution->values()));
     }
+
+    public function testDecompositionSwapsToFirstNonZeroPivot(): void
+    {
+        $matrix = Matrix::of([[0, 1], [1, 0]]);
+        $lu = LUDecomposition::of($matrix);
+
+        self::assertTrue($lu->P()->multiply($matrix)->equals($lu->L()->multiply($lu->U())));
+        self::assertSame('-1', $lu->determinant()->value());
+    }
+
+    public function testOneByOneDeterminantIsPositive(): void
+    {
+        self::assertSame(
+            '2',
+            LUDecomposition::of(Matrix::of([[2]]))->determinant()->value()
+        );
+    }
 }

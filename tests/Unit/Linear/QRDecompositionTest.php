@@ -62,6 +62,13 @@ final class QRDecompositionTest extends TestCase
         QRDecomposition::of(Matrix::of([[1, 0, 0], [0, 1, 0]]));
     }
 
+    public function testLinearlyDependentColumnsRemainRejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        QRDecomposition::of(Matrix::of([[1, 2], [0, 0], [0, 0]]));
+    }
+
     private function assertMatrixApproximately(Matrix $expected, Matrix $actual): void
     {
         self::assertSame($expected->shape(), $actual->shape());

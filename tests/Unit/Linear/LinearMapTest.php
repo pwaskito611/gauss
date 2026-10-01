@@ -51,6 +51,27 @@ final class LinearMapTest extends TestCase
         self::assertTrue($map->image()->contains(Vector::of(4, 5)));
     }
 
+    public function testKernelAndImageHandleSingleRowSingleColumnAndZeroMaps(): void
+    {
+        $singleRow = LinearMap::fromMatrix(Matrix::of([[1, 2, 3]]));
+        self::assertSame(2, $singleRow->kernel()->dimension());
+        self::assertSame(1, $singleRow->image()->dimension());
+        self::assertTrue($singleRow->kernel()->contains(Vector::of(-2, 1, 0)));
+
+        $singleColumn = LinearMap::fromMatrix(Matrix::of([[1], [2]]));
+        self::assertSame(0, $singleColumn->kernel()->dimension());
+        self::assertSame(1, $singleColumn->image()->dimension());
+
+        $zeroRowMap = LinearMap::fromMatrix(Matrix::zero(1, 3));
+        self::assertSame(3, $zeroRowMap->kernel()->dimension());
+        self::assertSame(0, $zeroRowMap->image()->dimension());
+        self::assertTrue($zeroRowMap->kernel()->contains(Vector::of(1, 0, 0)));
+
+        $zeroColumnMap = LinearMap::fromMatrix(Matrix::zero(3, 1));
+        self::assertSame(1, $zeroColumnMap->kernel()->dimension());
+        self::assertSame(0, $zeroColumnMap->image()->dimension());
+    }
+
     /** @return list<string> */
     private function valuesOf(Vector $vector): array
     {

@@ -88,6 +88,40 @@ final class MatrixTest extends TestCase
         self::assertTrue($matrix->multiply($matrix->inverse())->equals(Matrix::identity(2)));
     }
 
+    public function testOneByOneDeterminantAndAdjugateRemainDefined(): void
+    {
+        $matrix = Matrix::of([[7]]);
+
+        self::assertSame('7', $matrix->determinant()->value());
+        self::assertTrue($matrix->adjugate()->equals(Matrix::identity(1)));
+    }
+
+    public function testOneByOneMinorRemainsUnsupported(): void
+    {
+        $this->expectException(LogicException::class);
+
+        Matrix::of([[7]])->minor(0, 0);
+    }
+
+    public function testOneByOneCofactorIsOneAndInverseRemainsCorrect(): void
+    {
+        $matrix = Matrix::of([[7]]);
+
+        self::assertSame('1', $matrix->cofactor(0, 0)->value());
+        self::assertSame(
+            Number::of(1)->div(7)->value(),
+            $matrix->inverse()->get(0, 0)->value()
+        );
+    }
+
+    public function testMinorRemovesTheRequestedRowAndColumnInOrder(): void
+    {
+        $minor = Matrix::of([[1, 2, 3], [4, 5, 6]])->minor(0, 1);
+
+        self::assertSame([1, 2], $minor->shape());
+        self::assertSame([['4', '6']], $this->valuesOfMatrix($minor));
+    }
+
     public function testTraceAndRank(): void
     {
         $matrix = Matrix::of([[1, 2], [2, 4]]);

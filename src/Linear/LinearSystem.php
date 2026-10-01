@@ -13,6 +13,8 @@ use InvalidArgumentException;
 
 final class LinearSystem
 {
+    private readonly RowReduction $reduction;
+
     private function __construct(
         private readonly Matrix $matrix,
         private readonly Vector $rhs,
@@ -20,6 +22,18 @@ final class LinearSystem
         if ($matrix->rows() !== $rhs->dimension()) {
             throw new InvalidArgumentException('Matrix row count must match right-hand-side dimension.');
         }
+
+        $rows = [];
+        for ($row = 0; $row < $matrix->rows(); $row++) {
+            $values = [];
+            for ($column = 0; $column < $matrix->columns(); $column++) {
+                $values[] = $matrix->get($row, $column);
+            }
+            $values[] = $rhs->get($row);
+            $rows[] = $values;
+        }
+
+        $this->reduction = RowReduction::of(Matrix::of($rows));
     }
 
     public static function of(Matrix $matrix, Vector $rhs): self
@@ -44,25 +58,13 @@ final class LinearSystem
 
     public function solve(): LinearSystemSolution
     {
-        $rows = [];
-        for ($row = 0; $row < $this->matrix->rows(); $row++) {
-            $values = [];
-            for ($column = 0; $column < $this->matrix->columns(); $column++) {
-                $values[] = $this->matrix->get($row, $column);
-            }
-            $values[] = $this->rhs->get($row);
-            $rows[] = $values;
-        }
-
-        $reduced = RowReduction::of(Matrix::of($rows))->reducedEchelonForm();
+        $reduced = $this->reduction->reducedEchelonForm();
         $pivotColumns = [];
-        for ($row = 0; $row < $reduced->rows(); $row++) {
-            for ($column = 0; $column < $this->variables(); $column++) {
-                if (! $this->isZero($reduced->get($row, $column))) {
-                    $pivotColumns[] = $column;
-                    break;
-                }
+        foreach ($this->reduction->pivotColumns() as $column) {
+            if ($column >= $this->variables()) {
+                break;
             }
+            $pivotColumns[] = $column;
         }
 
         for ($row = 0; $row < $reduced->rows(); $row++) {
@@ -88,10 +90,7 @@ final class LinearSystem
             $values[$column] = $reduced->get($row, $this->variables());
         }
 
-        return new UniqueSolution(Vector::of(...array_map(
-            static fn (Number $value): Number => $value,
-            $values
-        )));
+        return new UniqueSolution(Vector::of(...$values));
     }
 
     public function solution(): LinearSystemSolution

@@ -33,6 +33,27 @@ final class RowReductionTest extends TestCase
         self::assertNotEmpty($reduction->operations());
     }
 
+    public function testFreeColumnsWithMultiplePivots(): void
+    {
+        $reduction = RowReduction::of(Matrix::of([
+            [1, 0, 2, 0],
+            [0, 1, 3, 0],
+        ]));
+
+        self::assertSame([0, 1], $reduction->pivotColumns());
+        self::assertSame([2, 3], $reduction->freeColumns());
+    }
+
+    public function testFreeColumnsWhenAllOrNoColumnsArePivots(): void
+    {
+        $fullRank = RowReduction::of(Matrix::identity(3));
+        self::assertSame([], $fullRank->freeColumns());
+
+        $zero = RowReduction::of(Matrix::zero(2, 3));
+        self::assertSame([], $zero->pivotColumns());
+        self::assertSame([0, 1, 2], $zero->freeColumns());
+    }
+
     /** @return list<list<string>> */
     private function valuesOf(Matrix $matrix): array
     {

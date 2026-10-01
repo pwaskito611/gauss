@@ -22,12 +22,11 @@ final class QRDecomposition
         }
 
         $columns = [];
+        $zero = $matrix->get(0, 0)->sub($matrix->get(0, 0));
+        $rValues = [];
+
         for ($column = 0; $column < $matrix->columns(); $column++) {
             $vector = $matrix->column($column);
-            $rValues[$column] = [];
-            for ($index = 0; $index < $matrix->columns(); $index++) {
-                $rValues[$index][$column] = $matrix->get(0, 0)->sub($matrix->get(0, 0));
-            }
 
             foreach ($columns as $index => $basis) {
                 $coefficient = $basis->dot($vector);
@@ -56,7 +55,7 @@ final class QRDecomposition
         for ($row = 0; $row < $matrix->columns(); $row++) {
             $values = [];
             for ($column = 0; $column < $matrix->columns(); $column++) {
-                $values[] = $rValues[$row][$column] ?? $matrix->get(0, 0)->sub($matrix->get(0, 0));
+                $values[] = $rValues[$row][$column] ?? $zero;
             }
             $rRows[] = $values;
         }

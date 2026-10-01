@@ -8,6 +8,9 @@ use DivisionByZeroError;
 use Gauss\Number\Number;
 use InvalidArgumentException;
 
+/**
+ * LU factorization with first-nonzero pivoting over Number's decimal-string domain.
+ */
 final class LUDecomposition
 {
     private function __construct(
@@ -103,7 +106,7 @@ final class LUDecomposition
             $result = $result->mul($this->upper->get($index, $index));
         }
         if ($this->swaps % 2 === 1) {
-            $result = $result->sub($result)->sub($result);
+            $result = $result->mul(Number::of(-1));
         }
         return $result;
     }

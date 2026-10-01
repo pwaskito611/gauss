@@ -302,17 +302,26 @@ final class Matrix
             if ($rowIndex === $row) {
                 continue;
             }
-            $rows[] = array_values(array_filter(
-                $values,
-                static fn (Number $value, int $index): bool => $index !== $column,
-                ARRAY_FILTER_USE_BOTH
-            ));
+
+            $minorRow = [];
+            foreach ($values as $columnIndex => $value) {
+                if ($columnIndex !== $column) {
+                    $minorRow[] = $value;
+                }
+            }
+            $rows[] = $minorRow;
         }
+
         return new self($rows, $this->zero);
     }
 
     public function cofactor(int $row, int $column): Number
     {
+        $this->assertIndex($row, $column);
+        if ($this->rowCount === 1 && $this->columnCount === 1) {
+            return $this->values[0][0]->one();
+        }
+
         $minor = $this->minor($row, $column)->determinant();
         return (($row + $column) % 2 === 0) ? $minor : $this->zero->sub($minor);
     }

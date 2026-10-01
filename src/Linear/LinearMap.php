@@ -8,8 +8,11 @@ use InvalidArgumentException;
 
 final class LinearMap
 {
+    private readonly RowReduction $reduction;
+
     private function __construct(private readonly Matrix $matrix)
     {
+        $this->reduction = RowReduction::of($matrix);
     }
 
     public static function fromMatrix(Matrix $matrix): self
@@ -39,10 +42,9 @@ final class LinearMap
 
     public function kernel(): VectorSpace
     {
-        $reduction = RowReduction::of($this->matrix);
-        $rref = $reduction->reducedEchelonForm();
-        $freeColumns = $reduction->freeColumns();
-        $pivotColumns = $reduction->pivotColumns();
+        $rref = $this->reduction->reducedEchelonForm();
+        $freeColumns = $this->reduction->freeColumns();
+        $pivotColumns = $this->reduction->pivotColumns();
 
         if ($freeColumns === []) {
             return VectorSpace::zero($this->domainDimension());
@@ -64,7 +66,6 @@ final class LinearMap
 
     public function image(): VectorSpace
     {
-        $reduction = RowReduction::of($this->matrix);
         $columns = [];
         for ($column = 0; $column < $this->matrix->columns(); $column++) {
             $columns[] = $this->matrix->column($column);
@@ -73,7 +74,7 @@ final class LinearMap
             return VectorSpace::zero($this->codomainDimension());
         }
 
-        $pivotColumns = $reduction->pivotColumns();
+        $pivotColumns = $this->reduction->pivotColumns();
         if ($pivotColumns === []) {
             return VectorSpace::zero($this->codomainDimension());
         }
@@ -82,7 +83,7 @@ final class LinearMap
 
     public function rank(): int
     {
-        return $this->matrix->rank();
+        return $this->reduction->rank();
     }
 
     public function nullity(): int

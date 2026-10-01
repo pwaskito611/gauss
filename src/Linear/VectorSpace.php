@@ -65,7 +65,6 @@ final class VectorSpace
             return $vector->isZero();
         }
 
-        $basisMatrix = self::columns($this->basis);
         $augmented = [];
         for ($row = 0; $row < $this->ambientDimension; $row++) {
             $values = [];
@@ -76,8 +75,7 @@ final class VectorSpace
             $augmented[] = $values;
         }
 
-        $rank = $basisMatrix->rank();
-        return Matrix::of($augmented)->rank() === $rank;
+        return Matrix::of($augmented)->rank() === count($this->basis);
     }
 
     public function span(): self

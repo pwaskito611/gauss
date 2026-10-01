@@ -31,6 +31,7 @@ final class RowReduction
         return new self($matrix);
     }
 
+    /** Returns row echelon form with each leading pivot normalized to one. */
     public function echelonForm(): Matrix
     {
         return $this->echelonCache ??= $this->reduce(false)[0];
@@ -91,9 +92,10 @@ final class RowReduction
         }
 
         $pivotColumns = $this->pivotColumns();
+        $pivotSet = array_fill_keys($pivotColumns, true);
         $free = [];
         for ($column = 0; $column < $this->matrix->columns(); $column++) {
-            if (! in_array($column, $pivotColumns, true)) {
+            if (! isset($pivotSet[$column])) {
                 $free[] = $column;
             }
         }
