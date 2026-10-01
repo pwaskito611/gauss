@@ -14,8 +14,11 @@ final class Number
     private const INTERNAL_SCALE = 60;
     private const EXP_WORK_SCALE = 80;
     private const EXP_GUARD = 30;
+    // 2^14 lebih besar dari batas argumen exp() yang diterima, yaitu 10.000.
+    private const MAX_EXP_SQUARINGS = 14;
     private const MAX_EXPONENT = 10000;
     private const MAX_EXP_ARGUMENT = 10000;
+    private const NEGATIVE_EXP_ZERO_BOUNDARY = '130';
 
     /**
      * Batas atas log10(e). Nilai sebenarnya ~0.4342944819; kita
@@ -104,7 +107,7 @@ final class Number
 
         // Zero-check exact (bukan bccomp dengan scale tetap yang bisa
         // salah menganggap 1e-100 sebagai nol).
-        if (Decimal::isZero($other->value)) {
+        if (self::isZeroExactString($other->value)) {
             throw new DivisionByZeroError(
                 'Division by zero is undefined.'
             );
@@ -116,15 +119,15 @@ final class Number
         //   ~100 digit sebelum significant digit pertama.
         $magnitudeAdjust = max(
             0,
-            Decimal::orderOf($other->value)
-                - Decimal::orderOf($this->value)
+            self::orderOfCanonical($other->value)
+                - self::orderOfCanonical($this->value)
         );
 
         $scale = self::INTERNAL_SCALE
             + $magnitudeAdjust
             + max(
-                Decimal::scaleOf($this->value),
-                Decimal::scaleOf($other->value)
+                self::scaleOfCanonical($this->value),
+                self::scaleOfCanonical($other->value)
             );
 
         // Normalize untuk menghilangkan trailing zero (mis. 1/2 → "0.5"
@@ -136,6 +139,7 @@ final class Number
         );
     }
 
+    /** Returns the Euclidean modulo of integers in [0, |$other|). */
     public function mod(int|float|string|self $other): self
     {
         $other = self::of($other);
@@ -196,10 +200,26 @@ final class Number
             );
         }
 
+        if ($exponent === 0) {
+            return self::of(1);
+        }
+
+        if ($this->value === '1') {
+            return $this;
+        }
+
+        if ($this->value === '-1') {
+            return $exponent % 2 === 0 ? self::of(1) : $this;
+        }
+
         if ($exponent < 0) {
             return $this->one()->div(
                 $this->pow(-$exponent)
             );
+        }
+
+        if ($exponent === 1 || $this->value === '0') {
+            return $this;
         }
 
         $result = $this->one();
@@ -223,7 +243,7 @@ final class Number
 
     public function sqrt(): self
     {
-        $x = Decimal::normalize($this->value);
+        $x = $this->value;
 
         if (str_starts_with($x, '-')) {
             throw new LogicException(
@@ -231,7 +251,7 @@ final class Number
             );
         }
 
-        if (Decimal::isZero($x)) {
+        if (self::isZeroExactString($x) || $x === '1') {
             return $this;
         }
 
@@ -250,9 +270,9 @@ final class Number
 
     public function exp(): self
     {
-        $x = Decimal::normalize($this->value);
+        $x = $this->value;
 
-        if (Decimal::isZero($x)) {
+        if (self::isZeroExactString($x)) {
             return self::of(1);
         }
 
@@ -275,6 +295,19 @@ final class Number
             );
         }
 
+        if (
+            $negative
+            && Decimal::compare(
+                $absolute,
+                self::NEGATIVE_EXP_ZERO_BOUNDARY
+            ) >= 0
+        ) {
+            // e > 1 + 1 + 1/2 + 1/6 + 1/24 + 1/120 > 2.7 dan
+            // 2.7^10 > 10^4, sehingga e^-130 < 10^-52, di bawah
+            // ambang pembulatan 5 * 10^-(SCALE + 1).
+            return self::of(0);
+        }
+
         // Hitung perkiraan jumlah digit integer pada exp(|x|) TANPA
         // floating point.
         //
@@ -291,75 +324,188 @@ final class Number
             0
         );
 
-        // Work scale:
-        //   SCALE           → digit final yang diinginkan
-        //   integerDigits   → cadangan untuk kasus negatif (inversi
-        //                     1/exp(x) menggeser digit ke kanan)
-        //   EXP_GUARD       → buffer akumulasi truncation Taylor + squaring
-        $work = max(
+        // Heuristic starting precision only; the interval test below certifies correctness.
+        $baseWork = max(
             self::EXP_WORK_SCALE,
             self::SCALE + $integerDigits + self::EXP_GUARD
         );
+        $iterationBound = 2 * ($baseWork + 32);
+        $roundoffEstimate = 16
+            * ($iterationBound + self::MAX_EXP_SQUARINGS + 2) ** 2;
+        $work = $baseWork
+            + self::MAX_EXP_SQUARINGS
+            + strlen((string) $roundoffEstimate)
+            + 3;
 
-        // Argument reduction: exp(x) = exp(x / 2^k) ^ (2^k),
-        // dengan |x/2^k| <= 1.
-        $reduced = $absolute;
+        $work = min($work, Decimal::MAX_INTERNAL_SCALE);
+
+        while (true) {
+            [$lower, $upper] = self::positiveExpEnclosure(
+                $absolute,
+                $integerDigits,
+                $work
+            );
+
+            if ($negative) {
+                $positiveLower = $lower;
+                $lower = self::divideLower('1', $upper, $work);
+                $upper = self::divideUpper(
+                    '1',
+                    $positiveLower,
+                    $work,
+                    self::unitAtScale($work)
+                );
+            }
+
+            $roundedLower = Decimal::round($lower, self::SCALE);
+            $roundedUpper = Decimal::round($upper, self::SCALE);
+
+            if ($roundedLower === $roundedUpper) {
+                return new self(Decimal::normalize($roundedLower));
+            }
+
+            if ($work > Decimal::MAX_INTERNAL_SCALE - 16) {
+                throw new InvalidArgumentException(
+                    'exp() could not certify rounding within the maximum supported scale.'
+                );
+            }
+
+            $work += 16;
+        }
+    }
+
+    /**
+     * @return array{string, string} lower and upper bounds for exp(value)
+     */
+    private static function positiveExpEnclosure(
+        string $value,
+        int $integerDigits,
+        int $scale
+    ): array {
+        $unit = self::unitAtScale($scale);
+        $reducedLower = $value;
+        $reducedUpper = $value;
         $squares = 0;
 
-        while (bccomp($reduced, '1', $work) > 0) {
-            $reduced = bcdiv($reduced, '2', $work);
+        while (Decimal::compare($reducedUpper, '1') > 0) {
+            if ($squares >= self::MAX_EXP_SQUARINGS) {
+                throw new InvalidArgumentException(
+                    'exp() argument reduction exceeded its supported bound.'
+                );
+            }
+
+            $reducedLower = self::divideLower($reducedLower, '2', $scale);
+            $reducedUpper = self::divideUpper(
+                $reducedUpper,
+                '2',
+                $scale,
+                $unit
+            );
             $squares++;
         }
 
-        $result = self::taylorExp($reduced, $work);
-
-        // Squaring berulang pada work scale; tidak ada pembulatan
-        // ke SCALE di antara langkah, sehingga error relatif tetap kecil.
-        for ($i = 0; $i < $squares; $i++) {
-            $result = bcmul($result, $result, $work);
-        }
-
-        // exp(-x) = 1 / exp(x): lakukan setelah ekspansi positif,
-        // bukan dengan mengekspansi nilai kecil (yang kehilangan digit).
-        if ($negative) {
-            $result = bcdiv('1', $result, $work);
-        }
-
-        return new self(
-            Decimal::normalize(
-                Decimal::round($result, self::SCALE)
-            )
+        $targetWidthScale = $scale - 2;
+        [$lower, $upper] = self::taylorExpEnclosure(
+            $reducedLower,
+            $reducedUpper,
+            $scale,
+            $targetWidthScale,
+            $unit
         );
+
+        for ($i = 0; $i < $squares; $i++) {
+            $lower = self::multiplyLower($lower, $lower, $scale);
+            $upper = self::multiplyUpper($upper, $upper, $scale, $unit);
+        }
+
+        return [$lower, $upper];
     }
 
-    private static function taylorExp(
-        string $x,
-        int $scale
-    ): string {
-        $term = '1';
-        $sum = '1';
-
-        // Untuk |x| <= 1, term_n = x^n / n! < 1/n!, sehingga n! > 10^scale
-        // menjamin term menjadi nol pada scale ini. Batas bawah 400
-        // memberi margin besar untuk scale kecil; loop break sendiri
-        // saat Decimal::isZero($term) true.
-        $maxIterations = max(400, $scale);
+    /**
+     * @return array{string, string} lower and upper bounds for exp(reduced)
+     */
+    private static function taylorExpEnclosure(
+        string $reducedLower,
+        string $reducedUpper,
+        int $scale,
+        int $targetWidthScale,
+        string $unit
+    ): array {
+        $termLower = '1';
+        $termUpper = '1';
+        $sumLower = '1';
+        $sumUpper = '1';
+        $maxIterations = 2 * $scale;
 
         for ($n = 1; $n <= $maxIterations; $n++) {
-            $term = bcdiv(
-                bcmul($term, $x, $scale),
+            $termLower = self::divideLower(
+                self::multiplyLower($termLower, $reducedLower, $scale),
                 (string) $n,
                 $scale
             );
+            $termUpper = self::divideUpper(
+                self::multiplyUpper($termUpper, $reducedUpper, $scale, $unit),
+                (string) $n,
+                $scale,
+                $unit
+            );
+            $sumLower = bcadd($sumLower, $termLower, $scale);
+            $sumUpper = bcadd($sumUpper, $termUpper, $scale);
 
-            if (Decimal::isZero($term)) {
-                break;
+            // This interval-width threshold is only a stopping optimization;
+            // final rounded-bound equality is the correctness condition.
+            // For 0 <= reduced <= 1, the tail after term n is <= term n.
+            $upperWithRemainder = bcadd($sumUpper, $termUpper, $scale);
+            $width = bcsub($upperWithRemainder, $sumLower, $scale);
+
+            if (
+                self::isZeroExactString($width)
+                || self::orderOfCanonical($width) < -$targetWidthScale
+            ) {
+                return [$sumLower, $upperWithRemainder];
             }
-
-            $sum = bcadd($sum, $term, $scale);
         }
 
-        return $sum;
+        return [$sumLower, bcadd($sumUpper, $termUpper, $scale)];
+    }
+
+    private static function multiplyLower(
+        string $left,
+        string $right,
+        int $scale
+    ): string {
+        return bcmul($left, $right, $scale);
+    }
+
+    private static function multiplyUpper(
+        string $left,
+        string $right,
+        int $scale,
+        string $unit
+    ): string {
+        return bcadd(bcmul($left, $right, $scale), $unit, $scale);
+    }
+
+    private static function divideLower(
+        string $dividend,
+        string $divisor,
+        int $scale
+    ): string {
+        return bcdiv($dividend, $divisor, $scale);
+    }
+
+    private static function divideUpper(
+        string $dividend,
+        string $divisor,
+        int $scale,
+        string $unit
+    ): string {
+        return bcadd(bcdiv($dividend, $divisor, $scale), $unit, $scale);
+    }
+
+    private static function unitAtScale(int $scale): string
+    {
+        return '0.' . str_repeat('0', $scale - 1) . '1';
     }
 
     public function value(): string
@@ -374,14 +520,7 @@ final class Number
 
     public function isIntegerLike(): bool
     {
-        return !str_contains($this->value, '.')
-            || trim(
-                substr(
-                    $this->value,
-                    strpos($this->value, '.') + 1
-                ),
-                '0'
-            ) === '';
+        return !str_contains($this->value, '.');
     }
 
     public function isDecimalLike(): bool
@@ -396,20 +535,52 @@ final class Number
 
     private function integerString(): string
     {
-        $normalized = Decimal::normalize($this->value);
-
-        [$integer, $fraction] = array_pad(
-            explode('.', $normalized, 2),
-            2,
-            ''
-        );
-
-        if (trim($fraction, '0') !== '') {
+        if (str_contains($this->value, '.')) {
             throw new InvalidArgumentException(
                 'Modulo requires integer values.'
             );
         }
 
-        return $integer;
+        return $this->value;
+    }
+
+    private static function isZeroExactString(string $value): bool
+    {
+        return trim(str_replace(['-', '.'], '', $value), '0') === '';
+    }
+
+    private static function scaleOfCanonical(string $value): int
+    {
+        $position = strpos($value, '.');
+
+        return $position === false
+            ? 0
+            : strlen($value) - $position - 1;
+    }
+
+    private static function orderOfCanonical(string $value): int
+    {
+        $value = ltrim($value, '-');
+        $dotPosition = strpos($value, '.');
+
+        if ($dotPosition === false) {
+            $integer = $value;
+            $fraction = '';
+        } else {
+            $integer = substr($value, 0, $dotPosition);
+            $fraction = substr($value, $dotPosition + 1);
+        }
+
+        $integer = ltrim($integer, '0');
+
+        if ($integer !== '') {
+            return strlen($integer) - 1;
+        }
+
+        $firstNonZero = strspn($fraction, '0');
+
+        return $firstNonZero === strlen($fraction)
+            ? 0
+            : -($firstNonZero + 1);
     }
 }

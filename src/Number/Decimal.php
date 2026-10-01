@@ -20,6 +20,8 @@ final class Decimal
 {
     private const PATTERN = '/^([+-]?)(\d*)(?:\.(\d*))?(?:[eE]([+-]?\d+))?$/';
     private const MAX_EXPONENT = 10000;
+    /** @internal */
+    public const MAX_INTERNAL_SCALE = 100000;
 
     private function __construct()
     {
@@ -48,13 +50,14 @@ final class Decimal
     {
         $value = trim($value);
 
-        if (!self::isValid($value)) {
+        if (
+            !preg_match(self::PATTERN, $value, $m)
+            || ($m[2] === '' && ($m[3] ?? '') === '')
+        ) {
             throw new InvalidArgumentException(
                 "Invalid decimal number: {$value}"
             );
         }
-
-        preg_match(self::PATTERN, $value, $m);
 
         $negative = $m[1] === '-';
         $integer = $m[2];
@@ -135,9 +138,7 @@ final class Decimal
      */
     public static function isZero(string $value): bool
     {
-        $value = self::normalize($value);
-
-        return trim(str_replace(['-', '.'], '', $value), '0') === '';
+        return self::isZeroCanonical(self::normalize($value));
     }
 
     /**
@@ -146,11 +147,7 @@ final class Decimal
      */
     public static function round(string $value, int $scale): string
     {
-        if ($scale < 0) {
-            throw new InvalidArgumentException(
-                'Scale must be non-negative.'
-            );
-        }
+        self::assertScale($scale);
 
         $value = self::normalize($value);
         $negative = $value[0] === '-';
@@ -176,7 +173,7 @@ final class Decimal
             $result = bcadd($result, $unit, $scale);
         }
 
-        if ($negative && !self::isZero($result)) {
+        if ($negative && !self::isZeroCanonical($result)) {
             $result = '-' . $result;
         }
 
@@ -187,9 +184,11 @@ final class Decimal
     {
         $a = self::normalize($a);
         $b = self::normalize($b);
+        $scale = max(self::scaleOfCanonical($a), self::scaleOfCanonical($b));
+        self::assertScale($scale);
 
         return self::normalize(
-            bcadd($a, $b, max(self::scaleOf($a), self::scaleOf($b)))
+            bcadd($a, $b, $scale)
         );
     }
 
@@ -197,9 +196,11 @@ final class Decimal
     {
         $a = self::normalize($a);
         $b = self::normalize($b);
+        $scale = max(self::scaleOfCanonical($a), self::scaleOfCanonical($b));
+        self::assertScale($scale);
 
         return self::normalize(
-            bcsub($a, $b, max(self::scaleOf($a), self::scaleOf($b)))
+            bcsub($a, $b, $scale)
         );
     }
 
@@ -207,9 +208,15 @@ final class Decimal
     {
         $a = self::normalize($a);
         $b = self::normalize($b);
+        $scaleA = self::scaleOfCanonical($a);
+        $scaleB = self::scaleOfCanonical($b);
+        self::assertScale($scaleA);
+        self::assertScale($scaleB);
+        $scale = $scaleA + $scaleB;
+        self::assertScale($scale);
 
         return self::normalize(
-            bcmul($a, $b, self::scaleOf($a) + self::scaleOf($b))
+            bcmul($a, $b, $scale)
         );
     }
 
@@ -223,9 +230,12 @@ final class Decimal
         $a = self::normalize($a);
         $b = self::normalize($b);
 
-        if (self::isZero($b)) {
+        if (self::isZeroCanonical($b)) {
             throw new DivisionByZeroError('Division by zero is undefined.');
         }
+
+        self::assertScale($scale);
+        self::assertScale($scale + 1);
 
         return self::round(bcdiv($a, $b, $scale + 1), $scale);
     }
@@ -234,8 +244,10 @@ final class Decimal
     {
         $a = self::normalize($a);
         $b = self::normalize($b);
+        $scale = max(self::scaleOfCanonical($a), self::scaleOfCanonical($b));
+        self::assertScale($scale);
 
-        return bccomp($a, $b, max(self::scaleOf($a), self::scaleOf($b)));
+        return bccomp($a, $b, $scale);
     }
 
     /**
@@ -245,12 +257,36 @@ final class Decimal
      */
     public static function scaleOf(string $value): int
     {
-        $normalized = self::normalize($value);
-        $position = strpos($normalized, '.');
+        return self::scaleOfCanonical(self::normalize($value));
+    }
+
+    private static function scaleOfCanonical(string $value): int
+    {
+        $position = strpos($value, '.');
 
         return $position === false
             ? 0
-            : strlen($normalized) - $position - 1;
+            : strlen($value) - $position - 1;
+    }
+
+    private static function isZeroCanonical(string $value): bool
+    {
+        return trim(str_replace(['-', '.'], '', $value), '0') === '';
+    }
+
+    private static function assertScale(int $scale): void
+    {
+        if ($scale < 0) {
+            throw new InvalidArgumentException(
+                'Scale must be non-negative.'
+            );
+        }
+
+        if ($scale > self::MAX_INTERNAL_SCALE) {
+            throw new InvalidArgumentException(
+                'Scale exceeds the maximum supported internal scale.'
+            );
+        }
     }
 
     /**

@@ -28,9 +28,12 @@ final class DecimalTest extends TestCase
     public function testNormalize(): void
     {
         self::assertSame('0', Decimal::normalize('-0'));
+        self::assertSame('0', Decimal::normalize('-0.000'));
         self::assertSame('1.23', Decimal::normalize('+001.2300'));
+        self::assertSame('-1.23', Decimal::normalize('-0001.2300'));
         self::assertSame('1000', Decimal::normalize('1e3'));
         self::assertSame('1230', Decimal::normalize('1.23e3'));
+        self::assertSame('123', Decimal::normalize('1.2300e2'));
         self::assertSame('0.0123', Decimal::normalize('1.23e-2'));
         self::assertSame('1.23', Decimal::normalize('123e-2'));
         self::assertSame('0.5', Decimal::normalize('.5'));
@@ -88,16 +91,60 @@ final class DecimalTest extends TestCase
         Decimal::round('1', -1);
     }
 
+    public function testRoundScaleLimit(): void
+    {
+        self::assertSame(100002, strlen(Decimal::round('1', 100000)));
+
+        $this->expectException(InvalidArgumentException::class);
+        Decimal::round('1', 100001);
+    }
+
+    public function testRoundHalfUpBoundariesAtSupportedScales(): void
+    {
+        $inputs = [
+            '1.2344',
+            '1.2345',
+            '1.2346',
+            '-1.2344',
+            '-1.2345',
+            '-1.2346',
+        ];
+        $expectedByScale = [
+            0 => ['1', '1', '1', '-1', '-1', '-1'],
+            1 => ['1.2', '1.2', '1.2', '-1.2', '-1.2', '-1.2'],
+            2 => ['1.23', '1.23', '1.23', '-1.23', '-1.23', '-1.23'],
+            3 => ['1.234', '1.235', '1.235', '-1.234', '-1.235', '-1.235'],
+        ];
+
+        foreach ([0, 1, 2, 3, 10, 50] as $scale) {
+            foreach ($inputs as $index => $input) {
+                if ($scale <= 3) {
+                    $expected = $expectedByScale[$scale][$index];
+                } else {
+                    $negative = str_starts_with($input, '-');
+                    $fraction = substr($input, strpos($input, '.') + 1);
+                    $expected = ($negative ? '-' : '') . '1.'
+                        . str_pad($fraction, $scale, '0');
+                }
+
+                self::assertSame($expected, Decimal::round($input, $scale));
+            }
+        }
+    }
+
     public function testAddSubMul(): void
     {
         self::assertSame('0.3', Decimal::add('0.1', '0.2'));
+        self::assertSame('6.912', Decimal::add('1.234', '5.678'));
         self::assertSame('1001', Decimal::add('1e3', '1'));
         self::assertSame('-1', Decimal::add('-1.5', '0.5'));
 
         self::assertSame('0.2', Decimal::sub('0.3', '0.1'));
+        self::assertSame('-4.444', Decimal::sub('1.234', '5.678'));
         self::assertSame('0.001', Decimal::sub('1', '0.999'));
 
         self::assertSame('0.02', Decimal::mul('0.1', '0.2'));
+        self::assertSame('7.006652', Decimal::mul('1.234', '5.678'));
         self::assertSame('3', Decimal::mul('1.5', '2'));
         self::assertSame('-7', Decimal::mul('-2', '3.5'));
     }
@@ -114,6 +161,28 @@ final class DecimalTest extends TestCase
     {
         $this->expectException(DivisionByZeroError::class);
         Decimal::div('1', '0', 2);
+    }
+
+    public function testDivScaleLimit(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        Decimal::div('1', '2', 100000);
+    }
+
+    public function testAddRejectsOperandScaleAboveLimit(): void
+    {
+        $value = '0.' . str_repeat('0', 100000) . '1';
+
+        $this->expectException(InvalidArgumentException::class);
+        Decimal::add($value, '0');
+    }
+
+    public function testMulRejectsResultScaleAboveLimit(): void
+    {
+        $value = '0.' . str_repeat('0', 50000) . '1';
+
+        $this->expectException(InvalidArgumentException::class);
+        Decimal::mul($value, $value);
     }
 
     public function testCompare(): void

@@ -16,6 +16,10 @@ Some operations and algorithms are inherently approximate. This is especially tr
 
 Gauss documents the distinction plainly. A `Number` can be precise as a value; a method may still produce an approximate result when the mathematics itself is approximate.
 
+## Resource bound
+
+BCMath operations reject a requested or derived scale above 100,000 decimal places with `InvalidArgumentException`. This bound prevents accidental extreme padding and intermediate allocation; it does not round values below the limit.
+
 ## Practical implication
 
 The library should be read as a precision-oriented numerics toolkit, not as a promise that every function is mathematically exact under all circumstances.
