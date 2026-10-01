@@ -40,6 +40,30 @@ final class StatisticsTest extends TestCase
         self::assertSame('1', $result->value());
     }
 
+    public function testNumberCanonicalRepresentationMatchesNumericEquality(): void
+    {
+        $oneForms = ['1', '01', '+1', '1.0', '1.00', '1e0', '1.0e0'];
+        $one = Number::of($oneForms[0]);
+
+        foreach ($oneForms as $form) {
+            $value = Number::of($form);
+            self::assertSame(0, $one->compare($value));
+            self::assertSame($one->value(), $value->value());
+        }
+
+        foreach (['0', '-0', '0.000', '-0.000', '+0', '0e1'] as $form) {
+            $value = Number::of($form);
+            self::assertSame('0', $value->value());
+            self::assertSame(0, Number::of(0)->compare($value));
+        }
+
+        foreach (['0.5', '.5', '5e-1'] as $form) {
+            $value = Number::of($form);
+            self::assertSame('0.5', $value->value());
+            self::assertSame(0, Number::of('0.5')->compare($value));
+        }
+    }
+
     public function testEmptyDataIsRejectedExceptForCount(): void
     {
         self::assertSame(0, Statistics::count([]));
@@ -70,6 +94,40 @@ final class StatisticsTest extends TestCase
         self::assertNumberValue('3.25', Statistics::percentile($data, 75));
         self::assertNumberValue('1.75', Statistics::quartile($data, 1));
         self::assertNumberValue('2.5', Statistics::decile($data, 5));
+    }
+
+    public function testQuantileBoundariesAndSmallDatasets(): void
+    {
+        $data = [1, 2, 3, 4];
+
+        self::assertNumberValue('1', Statistics::quantile($data, 0));
+        self::assertNumberValue('1.75', Statistics::quantile($data, '0.25'));
+        self::assertNumberValue('2.5', Statistics::quantile($data, '0.5'));
+        self::assertNumberValue('3.25', Statistics::quantile($data, '0.75'));
+        self::assertNumberValue('4', Statistics::quantile($data, 1));
+        self::assertNumberValue('7', Statistics::quantile([7], 0));
+        self::assertNumberValue('7', Statistics::quantile([7], 1));
+        self::assertNumberValue('1.5', Statistics::quantile([1, 3], '0.25'));
+        self::assertNumberValue('2', Statistics::quantile([1, 1, 3, 3], '0.5'));
+    }
+
+    public function testQuantileLargeDatasetUsesExactPosition(): void
+    {
+        $data = range(0, 999);
+
+        self::assertNumberValue('9.99', Statistics::quantile($data, '0.01'));
+        self::assertNumberValue('499.5', Statistics::quantile($data, '0.5'));
+        self::assertNumberValue('989.01', Statistics::quantile($data, '0.99'));
+    }
+
+    public function testQuantileAcceptsScientificNotationAndStaysInRange(): void
+    {
+        $data = [Number::of('1e2'), Number::of('2e2')];
+        $quantile = Statistics::quantile($data, Number::of('5e-1'));
+
+        self::assertNumberValue('150', $quantile);
+        self::assertGreaterThanOrEqual(0, $quantile->compare(Number::of('1e2')));
+        self::assertLessThanOrEqual(0, $quantile->compare(Number::of('2e2')));
     }
 
     public function testQuantilesRejectInvalidProbabilityAndLabels(): void
@@ -108,6 +166,20 @@ final class StatisticsTest extends TestCase
         ]);
 
         self::assertSame(0, $mode->compare(1));
+    }
+
+    public function testModePreservesFirstMaximumTieAndCanonicalValue(): void
+    {
+        self::assertSame('7', Statistics::mode([7])->value());
+        self::assertSame('2', Statistics::mode([2, 2, 2, 1])->value());
+        self::assertSame('3', Statistics::mode([3, 1, 2])->value());
+        self::assertSame('1', Statistics::mode([2, 1, 1, 2])->value());
+        self::assertSame('1', Statistics::mode([
+            Number::of('1.00'),
+            Number::of(1),
+            Number::of('2.0'),
+            Number::of(2),
+        ])->value());
     }
 
     public function testDependenceStatisticsAndSampleCovariance(): void
@@ -224,6 +296,29 @@ final class StatisticsTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         Statistics::covariance([1, 2], [1]);
+    }
+
+    public function testCovarianceValidationMessagesMatchObservationRules(): void
+    {
+        try {
+            Statistics::covariance([], [], false);
+            self::fail('Expected empty population covariance to be rejected.');
+        } catch (InvalidArgumentException $exception) {
+            self::assertSame(
+                'Covariance requires at least one observation.',
+                $exception->getMessage()
+            );
+        }
+
+        try {
+            Statistics::covariance([1], [1], true);
+            self::fail('Expected sample covariance to require two observations.');
+        } catch (InvalidArgumentException $exception) {
+            self::assertSame(
+                'Sample covariance requires at least two observations.',
+                $exception->getMessage()
+            );
+        }
     }
 
     private static function assertNumberValue(string $expected, Number $actual): void
