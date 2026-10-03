@@ -30,8 +30,8 @@ final class OutcomeIdentity
             return 'int:' . $outcome;
         }
         if (is_float($outcome)) {
-            if (is_nan($outcome)) {
-                throw new InvalidArgumentException('NAN is not a supported sample-space outcome.');
+            if (is_nan($outcome) || is_infinite($outcome)) {
+                throw new InvalidArgumentException('Only finite scalar values are supported as sample-space outcomes.');
             }
 
             if ($outcome == 0.0) {
@@ -50,19 +50,37 @@ final class OutcomeIdentity
             return 'resource:' . get_resource_type($outcome) . ':' . get_resource_id($outcome);
         }
         if (is_array($outcome)) {
-            $serialized = serialize($outcome);
-            if (preg_match('/(?:^|[;{])[rR]:\d+;/', $serialized) === 1) {
-                throw new InvalidArgumentException('Circular or referenced arrays are not supported as outcomes.');
-            }
-
-            $parts = [];
-            foreach ($outcome as $key => $value) {
-                $parts[] = self::encode($key) . '=>' . self::encode($value);
-            }
-
-            return 'array:' . implode('|', $parts);
+            return self::encodeArray($outcome);
         }
 
         throw new InvalidArgumentException('Unsupported sample-space outcome.');
+    }
+
+    private static function encodeArray(array $outcome): string
+    {
+        foreach ($outcome as $key => $value) {
+            if (\ReflectionReference::fromArrayElement($outcome, $key) !== null) {
+                throw new InvalidArgumentException('Arrays containing references are not supported as outcomes.');
+            }
+        }
+
+        $keys = array_keys($outcome);
+        if (! array_is_list($outcome)) {
+            sort($keys, SORT_STRING);
+        }
+
+        $parts = [];
+        foreach ($keys as $key) {
+            $encodedKey = self::encode($key);
+            $encodedValue = self::encode($outcome[$key]);
+            $parts[] = self::encodeEntry($encodedKey, $encodedValue);
+        }
+
+        return 'array:' . (array_is_list($outcome) ? 'list' : 'assoc') . ':' . count($outcome) . ':' . implode('', $parts);
+    }
+
+    private static function encodeEntry(string $encodedKey, string $encodedValue): string
+    {
+        return 'k:' . strlen($encodedKey) . ':' . $encodedKey . ';v:' . strlen($encodedValue) . ':' . $encodedValue . ';';
     }
 }

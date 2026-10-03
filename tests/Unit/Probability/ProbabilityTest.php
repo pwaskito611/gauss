@@ -331,6 +331,52 @@ final class ProbabilityTest extends TestCase
         self::assertSame(['1'], $first->complement()->outcomes());
     }
 
+    public function testOutcomeIdentityRejectsArrayReferencesRecursively(): void
+    {
+        $value = 1;
+        $outcome = [
+            'nested' => [
+                'value' => &$value,
+            ],
+        ];
+
+        $this->expectException(InvalidArgumentException::class);
+        OutcomeIdentity::key($outcome);
+    }
+
+    public function testCriticalNestedArrayCollisionIsRejectedAtSampleSpaceLevel(): void
+    {
+        $first = [0 => [0 => 1, 1 => 2]];
+        $second = [
+            0 => [0 => 1],
+            1 => 2,
+        ];
+
+        self::assertNotSame(OutcomeIdentity::key($first), OutcomeIdentity::key($second));
+
+        $space = SampleSpace::of($first, $second);
+        self::assertSame(2, $space->size());
+        self::assertTrue($space->contains($first));
+        self::assertTrue($space->contains($second));
+    }
+
+    public function testSampleSpaceMismatchFailsExplicitlyForExpectationAndVariance(): void
+    {
+        $spaceOne = SampleSpace::of(1, 2);
+        $spaceTwo = SampleSpace::of(1, 2, 3);
+        $variable = RandomVariable::of($spaceOne, [10, 20]);
+        $measure = ProbabilityMeasure::uniform($spaceTwo);
+
+        foreach ([Expectation::class, Variance::class] as $factory) {
+            try {
+                $factory::of($variable, $measure);
+                self::fail('Expected sample-space mismatch to be rejected.');
+            } catch (InvalidArgumentException) {
+                self::assertTrue(true);
+            }
+        }
+    }
+
     private static function assertProbabilityApproximately(string $expected, Probability $actual): void
     {
         self::assertLessThanOrEqual(0, Number::of($actual->value())->sub($expected)->abs()->compare('0.000000000001'));

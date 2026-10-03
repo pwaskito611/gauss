@@ -48,34 +48,29 @@ final class RandomVariable
             }
 
             $sourceIdentities = [];
-            foreach ($entries as [$candidate]) {
+            $entriesByIdentity = [];
+            foreach ($entries as [$candidate, $value]) {
                 $identity = OutcomeIdentity::key($candidate);
                 if (isset($sourceIdentities[$identity])) {
                     throw new InvalidArgumentException('Random variable mapping cannot define duplicate source outcomes.');
                 }
                 $sourceIdentities[$identity] = true;
+                $entriesByIdentity[$identity] = $value;
             }
 
             foreach ($outcomes as $outcome) {
-                $found = false;
                 $outcomeIdentity = OutcomeIdentity::key($outcome);
-                foreach ($entries as [$candidate, $value]) {
-                    if (OutcomeIdentity::key($candidate) === $outcomeIdentity) {
-                        $normalized[] = Number::of($value);
-                        $lookup[$outcomeIdentity] = $normalized[array_key_last($normalized)];
-                        $found = true;
-                        break;
-                    }
-                }
-                if (! $found) {
+                if (! array_key_exists($outcomeIdentity, $entriesByIdentity)) {
                     throw new InvalidArgumentException('Random variable must define a numeric value for every sample outcome.');
                 }
+
+                $normalizedValue = Number::of($entriesByIdentity[$outcomeIdentity]);
+                $normalized[] = $normalizedValue;
+                $lookup[$outcomeIdentity] = $normalizedValue;
             }
 
-            foreach ($entries as [$candidate]) {
-                if (! $space->contains($candidate)) {
-                    throw new InvalidArgumentException('Random variable mapping must use sample space outcomes only.');
-                }
+            if (count($sourceIdentities) !== count($outcomes)) {
+                throw new InvalidArgumentException('Random variable mapping must use sample space outcomes only.');
             }
         }
 
@@ -109,10 +104,15 @@ final class RandomVariable
 
     public function valueFor(mixed $outcome): Number
     {
-        if (! $this->space->contains($outcome)) {
+        if (is_float($outcome) && is_nan($outcome)) {
             throw new InvalidArgumentException('Outcome is not in the sample space.');
         }
 
-        return $this->lookup[OutcomeIdentity::key($outcome)];
+        $identity = OutcomeIdentity::key($outcome);
+        if (! isset($this->lookup[$identity])) {
+            throw new InvalidArgumentException('Outcome is not in the sample space.');
+        }
+
+        return $this->lookup[$identity];
     }
 }

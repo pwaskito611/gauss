@@ -12,6 +12,9 @@ final class Expectation
         private readonly RandomVariable $variable,
         private readonly ProbabilityMeasure $measure,
     ) {
+        if (! $this->variable->sampleSpace()->equals($this->measure->sampleSpace())) {
+            throw new \InvalidArgumentException('RandomVariable and ProbabilityMeasure must use the same sample space.');
+        }
     }
 
     public static function of(RandomVariable $variable, ProbabilityMeasure $measure): self

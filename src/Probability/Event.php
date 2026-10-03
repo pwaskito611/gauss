@@ -10,6 +10,8 @@ final class Event
 {
     /** @var list<mixed> */
     private readonly array $outcomes;
+    /** @var array<string, true> */
+    private readonly array $identitySet;
 
     private readonly SampleSpace $space;
 
@@ -33,6 +35,7 @@ final class Event
             }
         }
         $this->outcomes = $unique;
+        $this->identitySet = $identities;
     }
 
     /** @param mixed ...$outcomes */
@@ -69,13 +72,7 @@ final class Event
         }
 
         $identity = OutcomeIdentity::key($outcome);
-        foreach ($this->outcomes as $item) {
-            if (OutcomeIdentity::key($item) === $identity) {
-                return true;
-            }
-        }
-
-        return false;
+        return isset($this->identitySet[$identity]);
     }
 
     public function equals(self $other): bool
@@ -150,9 +147,7 @@ final class Event
 
     private function sameSampleSpace(self $other): bool
     {
-        return $this->space->size() === $other->space->size()
-            && $this->containsSampleSpaceOutcomes($other->space)
-            && $other->containsSampleSpaceOutcomes($this->space);
+        return $this->space->equals($other->space);
     }
 
     /** @param list<mixed> $outcomes */

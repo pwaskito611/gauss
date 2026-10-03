@@ -10,6 +10,8 @@ final class SampleSpace
 {
     /** @var list<mixed> */
     private readonly array $outcomes;
+    /** @var array<string, true> */
+    private readonly array $identitySet;
 
     /** @param list<mixed> $outcomes */
     private function __construct(array $outcomes)
@@ -29,6 +31,7 @@ final class SampleSpace
         }
 
         $this->outcomes = $unique;
+        $this->identitySet = $identities;
     }
 
     /** @param mixed ...$outcomes */
@@ -56,13 +59,22 @@ final class SampleSpace
         }
 
         $identity = OutcomeIdentity::key($outcome);
-        foreach ($this->outcomes as $item) {
-            if (OutcomeIdentity::key($item) === $identity) {
-                return true;
+        return isset($this->identitySet[$identity]);
+    }
+
+    public function equals(self $other): bool
+    {
+        if ($this->size() !== $other->size()) {
+            return false;
+        }
+
+        foreach ($this->identitySet as $identity => $_) {
+            if (! isset($other->identitySet[$identity])) {
+                return false;
             }
         }
 
-        return false;
+        return true;
     }
 
     public function size(): int

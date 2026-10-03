@@ -46,27 +46,22 @@ final class ProbabilityMeasure
         }
 
         $sourceIdentities = [];
-        foreach ($entries as [$candidate]) {
+        $entriesByIdentity = [];
+        foreach ($entries as [$candidate, $weight]) {
             $identity = OutcomeIdentity::key($candidate);
             if (isset($sourceIdentities[$identity])) {
                 throw new InvalidArgumentException('Each sample-space outcome may have only one probability weight.');
             }
             $sourceIdentities[$identity] = true;
+            $entriesByIdentity[$identity] = $weight;
         }
 
         foreach ($outcomes as $outcome) {
             $outcomeIdentity = OutcomeIdentity::key($outcome);
-            $found = false;
-            foreach ($entries as [$candidate, $weight]) {
-                if (OutcomeIdentity::key($candidate) === $outcomeIdentity) {
-                    $probabilities[$outcomeIdentity] = Probability::of($weight);
-                    $found = true;
-                    break;
-                }
-            }
-            if (! $found) {
+            if (! array_key_exists($outcomeIdentity, $entriesByIdentity)) {
                 throw new InvalidArgumentException('Each sample-space outcome must have a probability weight.');
             }
+            $probabilities[$outcomeIdentity] = Probability::of($entriesByIdentity[$outcomeIdentity]);
         }
 
         if (count($sourceIdentities) !== count($outcomes)) {
@@ -130,15 +125,13 @@ final class ProbabilityMeasure
         $this->assertSameSampleSpace($event);
 
         if ($event->isEmpty()) {
-            return Probability::of($this->weights[array_key_first($this->weights)]->value()->sub(
-                $this->weights[array_key_first($this->weights)]->value()
-            ));
+            return Probability::of(Number::of(0));
         }
 
-        $first = $this->weights[array_key_first($this->weights)]->value();
-        $sum = $first->sub($first);
+        $sum = Number::of(0);
         foreach ($event->outcomes() as $outcome) {
-            $sum = $sum->add($this->probabilityFor($outcome)->value());
+            $identity = OutcomeIdentity::key($outcome);
+            $sum = $sum->add($this->weights[$identity]->value());
         }
 
         return Probability::of($sum);
@@ -146,11 +139,16 @@ final class ProbabilityMeasure
 
     public function probabilityFor(mixed $outcome): Probability
     {
-        if (! $this->space->contains($outcome)) {
+        if (is_float($outcome) && is_nan($outcome)) {
             throw new InvalidArgumentException('Outcome is not in the sample space.');
         }
 
-        return $this->weights[OutcomeIdentity::key($outcome)];
+        $identity = OutcomeIdentity::key($outcome);
+        if (! isset($this->weights[$identity])) {
+            throw new InvalidArgumentException('Outcome is not in the sample space.');
+        }
+
+        return $this->weights[$identity];
     }
 
     public function conditional(Event $a, Event $b): Probability
@@ -183,14 +181,8 @@ final class ProbabilityMeasure
     private function assertSameSampleSpace(Event ...$events): void
     {
         foreach ($events as $event) {
-            if ($event->sampleSpace()->size() !== $this->space->size()) {
+            if (! $this->space->equals($event->sampleSpace())) {
                 throw new InvalidArgumentException('Event must belong to the same sample space.');
-            }
-
-            foreach ($this->space->outcomes() as $outcome) {
-                if (! $event->sampleSpace()->contains($outcome)) {
-                    throw new InvalidArgumentException('Event must belong to the same sample space.');
-                }
             }
         }
     }
