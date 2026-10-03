@@ -65,7 +65,6 @@ final class Bisection
 
             if ($fa->mul($fMidpoint)->compare(0) <= 0) {
                 $b = $midpoint;
-                $fb = $fMidpoint;
             } else {
                 $a = $midpoint;
                 $fa = $fMidpoint;

@@ -64,6 +64,19 @@ final class NumericalTest extends TestCase
         self::assertLessThan(1e-6, abs((float) $root->value() - 2.0));
     }
 
+    public function testNewtonRaphsonReturnsExactRootAfterFinalUpdate(): void
+    {
+        $root = NewtonRaphson::solve(
+            static fn (Number $x): Number => $x->sub(2),
+            static fn (Number $x): Number => Number::of(1),
+            5,
+            '0.000001',
+            1,
+        );
+
+        self::assertSame(0, $root->compare(2));
+    }
+
     public function testSecantFindsRoot(): void
     {
         $root = Secant::solve(
@@ -81,6 +94,19 @@ final class NumericalTest extends TestCase
                 ->abs()
                 ->compare('0.000001')
         );
+    }
+
+    public function testSecantReturnsExactRootAfterFinalUpdate(): void
+    {
+        $root = Secant::solve(
+            static fn (Number $x): Number => $x->sub(2),
+            1,
+            3,
+            '0.000001',
+            1,
+        );
+
+        self::assertSame(0, $root->compare(2));
     }
 
     public function testSecantRejectsIdenticalInitialGuesses(): void

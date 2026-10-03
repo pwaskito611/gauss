@@ -44,9 +44,10 @@ final class SimpsonRule
         $n = Number::of($subdivisions);
         $step = $b->sub($a)->div($n);
         $sum = $function($a)->add($function($b));
+        $xi = $a;
 
         for ($index = 1; $index < $subdivisions; $index++) {
-            $xi = $a->add(Number::of($index)->mul($step));
+            $xi = $xi->add($step);
             $term = $function($xi);
 
             $sum = $sum->add(

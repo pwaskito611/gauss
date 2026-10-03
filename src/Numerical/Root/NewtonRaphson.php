@@ -52,11 +52,19 @@ final class NewtonRaphson
             $step = $fx->div($dfx);
             $next = $x->sub($step);
 
-            if ($next->sub($x)->abs()->compare($tol) <= 0 || $step->abs()->compare($tol) <= 0) {
+            if ($step->abs()->compare($tol) <= 0) {
                 return $next;
             }
 
             $x = $next;
+
+            if ($iteration === $maxIterations - 1) {
+                $fFinal = $function($x);
+
+                if ($fFinal->compare(0) === 0) {
+                    return $x;
+                }
+            }
         }
 
         throw new LogicException('Newton-Raphson did not converge within the maximum number of iterations.');

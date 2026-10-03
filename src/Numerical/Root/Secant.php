@@ -67,6 +67,14 @@ final class Secant
 
             $x0 = $x1;
             $x1 = $next;
+
+            if ($iteration === $maxIterations - 1) {
+                $fFinal = $function($x1);
+
+                if ($fFinal->compare(0) === 0) {
+                    return $x1;
+                }
+            }
         }
 
         throw new LogicException('Secant method did not converge within the maximum number of iterations.');

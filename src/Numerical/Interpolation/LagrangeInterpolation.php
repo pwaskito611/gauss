@@ -24,9 +24,11 @@ final class LagrangeInterpolation
 
         $target = Number::of($x);
         $seenX = [];
+        $normalizedPoints = [];
 
-        foreach ($points as [$pointX]) {
+        foreach ($points as [$pointX, $pointY]) {
             $xValue = Number::of($pointX);
+            $yValue = Number::of($pointY);
 
             foreach ($seenX as $seenValue) {
                 if ($xValue->compare($seenValue) === 0) {
@@ -35,28 +37,26 @@ final class LagrangeInterpolation
             }
 
             $seenX[] = $xValue;
+            $normalizedPoints[] = [$xValue, $yValue];
         }
 
         $result = Number::of(0);
 
-        foreach ($points as $index => [$pointX, $pointY]) {
+        foreach ($normalizedPoints as $index => [$pointX, $pointY]) {
             $numerator = Number::of(1);
             $denominator = Number::of(1);
 
-            foreach ($points as $otherIndex => [$otherX]) {
+            foreach ($normalizedPoints as $otherIndex => [$otherX]) {
                 if ($index === $otherIndex) {
                     continue;
                 }
 
-                $xValue = Number::of($pointX);
-                $otherValue = Number::of($otherX);
-
-                $numerator = $numerator->mul($target->sub($otherValue));
-                $denominator = $denominator->mul($xValue->sub($otherValue));
+                $numerator = $numerator->mul($target->sub($otherX));
+                $denominator = $denominator->mul($pointX->sub($otherX));
             }
 
             $result = $result->add(
-                $numerator->div($denominator)->mul(Number::of($pointY))
+                $numerator->div($denominator)->mul($pointY)
             );
         }
 
