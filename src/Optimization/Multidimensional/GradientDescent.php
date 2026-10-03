@@ -21,7 +21,7 @@ final class GradientDescent
      * @param callable(Vector): Number $objective
         * @param int|float|string|Number $gradientStep Positive finite-difference step (default: 0.000001).
         * @param int|float|string|Number|null $lineSearchLowerBound Defaults to zero.
-        * @param int|float|string|Number|null $lineSearchUpperBound Defaults to 10 times the learning rate for compatibility.
+        * @param int|float|string|Number|null $lineSearchUpperBound Defaults to 10 times the learning rate; the learning rate acts as the default line-search scale and the explicit bound overrides it when provided.
         * @param BoxConstraint|null $bounds Optional domain bounds for finite differences and line search.
      */
     public static function minimize(
@@ -53,7 +53,7 @@ final class GradientDescent
      * @param callable(Vector): Number $objective
         * @param int|float|string|Number $gradientStep Positive finite-difference step (default: 0.000001).
         * @param int|float|string|Number|null $lineSearchLowerBound Defaults to zero.
-        * @param int|float|string|Number|null $lineSearchUpperBound Defaults to 10 times the learning rate for compatibility.
+        * @param int|float|string|Number|null $lineSearchUpperBound Defaults to 10 times the learning rate; the learning rate acts as the default line-search scale and the explicit bound overrides it when provided.
         * @param BoxConstraint|null $bounds Optional domain bounds for finite differences and line search.
      */
     public static function maximize(
@@ -175,7 +175,7 @@ final class GradientDescent
             );
 
             $next = $current->add($stepDirection->scale($lineResult->point()));
-            $nextValue = self::evaluateObjective($objective, $next);
+            $nextValue = $maximize ? $lineResult->value()->mul(-1) : $lineResult->value();
             $delta = Number::of($next->distance($current));
 
             $current = $next;
@@ -195,6 +195,11 @@ final class GradientDescent
     private static function gradient(callable $objective, Vector $point, Number $step, ?BoxConstraint $bounds): Vector
     {
         $values = [];
+
+        $baseValues = [];
+        foreach (range(0, $point->dimension() - 1) as $dimensionIndex) {
+            $baseValues[] = $point->get($dimensionIndex);
+        }
 
         foreach (range(0, $point->dimension() - 1) as $index) {
             $value = $point->get($index);
@@ -219,20 +224,10 @@ final class GradientDescent
                 continue;
             }
 
-            $plus = [];
-            $minus = [];
-
-            foreach (range(0, $point->dimension() - 1) as $dimensionIndex) {
-                $value = $point->get($dimensionIndex);
-                if ($dimensionIndex === $index) {
-                    $plus[] = Number::of($value)->add($forwardStep);
-                    $minus[] = Number::of($value)->sub($backwardStep);
-                    continue;
-                }
-
-                $plus[] = Number::of($value);
-                $minus[] = Number::of($value);
-            }
+            $plus = $baseValues;
+            $minus = $baseValues;
+            $plus[$index] = $value->add($forwardStep);
+            $minus[$index] = $value->sub($backwardStep);
 
             $plusPoint = Vector::of(...$plus);
             $minusPoint = Vector::of(...$minus);

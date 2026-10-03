@@ -76,7 +76,7 @@ final class CoordinateDescent
                         $values[] = $current->get($dimensionIndex);
                     }
 
-                    return Number::of($objective(Vector::of(...$values)));
+                    return $objective(Vector::of(...$values));
                 };
 
                 $candidate = GoldenSectionSearch::minimize(
@@ -93,9 +93,9 @@ final class CoordinateDescent
                 }
 
                 $current = Vector::of(...$updated);
+                $currentValue = $candidate->value();
             }
 
-            $currentValue = Number::of($objective($current));
             $delta = Number::of($current->distance($previous));
 
             if ($delta->compare($tol) <= 0 || $previousValue->sub($currentValue)->abs()->compare($tol) <= 0) {

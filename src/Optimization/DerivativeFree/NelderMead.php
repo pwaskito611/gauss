@@ -94,7 +94,8 @@ final class NelderMead
                 throw new InvalidArgumentException('Every simplex point must be inside the supplied bounds.');
             }
 
-            foreach (array_slice($simplex, 0, $index) as $previousPoint) {
+            for ($previousIndex = 0; $previousIndex < $index; $previousIndex++) {
+                $previousPoint = $simplex[$previousIndex];
                 $identical = true;
                 foreach (range(0, $dimension - 1) as $coordinate) {
                     if ($point->get($coordinate)->compare($previousPoint->get($coordinate)) !== 0) {
@@ -130,11 +131,17 @@ final class NelderMead
             $secondWorstIndex = self::secondWorstIndex($values, $worstIndex);
             $centroid = self::centroid($points, $worstIndex);
 
-            $reflection = $centroid->add($centroid->sub($points[$worstIndex])->scale(Number::of(1)));
+            $reflection = self::effectiveCandidate(
+                $centroid->add($centroid->sub($points[$worstIndex])->scale(Number::of(1))),
+                $bounds,
+            );
             $reflectionValue = self::evaluate($objective, $reflection, $maximize, $bounds);
 
             if ($reflectionValue->compare($values[$bestIndex]) < 0) {
-                $expansion = $centroid->add($reflection->sub($centroid)->scale(Number::of(2)));
+                $expansion = self::effectiveCandidate(
+                    $centroid->add($reflection->sub($centroid)->scale(Number::of(2))),
+                    $bounds,
+                );
                 $expansionValue = self::evaluate($objective, $expansion, $maximize, $bounds);
 
                 if ($expansionValue->compare($reflectionValue) < 0) {
@@ -150,7 +157,10 @@ final class NelderMead
             } else {
                 $outsideContraction = $reflectionValue->compare($values[$worstIndex]) < 0;
                 $contractionBase = $outsideContraction ? $reflection : $points[$worstIndex];
-                $contraction = $centroid->add($contractionBase->sub($centroid)->scale(Number::of('0.5')));
+                $contraction = self::effectiveCandidate(
+                    $centroid->add($contractionBase->sub($centroid)->scale(Number::of('0.5'))),
+                    $bounds,
+                );
                 $contractionValue = self::evaluate($objective, $contraction, $maximize, $bounds);
 
                 $contractionThreshold = $outsideContraction
@@ -167,8 +177,12 @@ final class NelderMead
                             continue;
                         }
 
-                        $points[$index] = $bestPoint->add($point->sub($bestPoint)->scale(Number::of('0.5')));
-                        $values[$index] = self::evaluate($objective, $points[$index], $maximize, $bounds);
+                        $shrunkPoint = self::effectiveCandidate(
+                            $bestPoint->add($point->sub($bestPoint)->scale(Number::of('0.5'))),
+                            $bounds,
+                        );
+                        $points[$index] = $shrunkPoint;
+                        $values[$index] = self::evaluate($objective, $shrunkPoint, $maximize, $bounds);
                     }
                 }
             }
@@ -213,6 +227,31 @@ final class NelderMead
         $value = Number::of($objective($point));
 
         return $maximize ? $value->mul(-1) : $value;
+    }
+
+    private static function effectiveCandidate(Vector $point, ?BoxConstraint $bounds): Vector
+    {
+        if ($bounds === null) {
+            return $point;
+        }
+
+        $values = [];
+
+        foreach (range(0, $point->dimension() - 1) as $index) {
+            $value = $point->get($index);
+            $lower = $bounds->lower()->get($index);
+            $upper = $bounds->upper()->get($index);
+
+            if ($value->compare($lower) < 0) {
+                $value = $lower;
+            } elseif ($value->compare($upper) > 0) {
+                $value = $upper;
+            }
+
+            $values[] = $value;
+        }
+
+        return Vector::of(...$values);
     }
 
     private static function originalValue(Number $value, bool $maximize): Number

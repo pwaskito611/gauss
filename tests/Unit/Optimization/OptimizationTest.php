@@ -290,28 +290,26 @@ final class OptimizationTest extends TestCase
         );
     }
 
-    public function testNelderMeadRejectsOutOfBoundsCandidateBeforeObjectiveEvaluation(): void
+    public function testNelderMeadClipsOutOfBoundsCandidatesBeforeObjectiveEvaluation(): void
     {
         $bounds = BoxConstraint::from(Vector::of('-0.75'), Vector::of('0.75'));
-        $objectiveCalls = 0;
+        $evaluatedPoints = [];
 
-        try {
-            NelderMead::minimize(
-                static function (Vector $point) use ($bounds, &$objectiveCalls): Number {
-                    self::assertTrue($bounds->contains($point));
-                    $objectiveCalls++;
+        $result = NelderMead::minimize(
+            static function (Vector $point) use ($bounds, &$evaluatedPoints): Number {
+                self::assertTrue($bounds->contains($point));
+                $evaluatedPoints[] = $point;
 
-                    return $point->get(0)->pow(2);
-                },
-                [Vector::of('-0.5'), Vector::of('0.5')],
-                '0.000001',
-                10,
-                $bounds,
-            );
-            self::fail('Expected out-of-bounds Nelder-Mead candidate to be rejected.');
-        } catch (InvalidArgumentException) {
-            self::assertSame(2, $objectiveCalls);
-        }
+                return $point->get(0)->pow(2);
+            },
+            [Vector::of('-0.5'), Vector::of('0.5')],
+            '0.000001',
+            10,
+            $bounds,
+        );
+
+        self::assertNotEmpty($evaluatedPoints);
+        self::assertTrue($result->converged() || $result->iterations() > 0);
     }
 
     public function testNelderMeadShrinksOriginalSimplexWhenOutsideContractionFails(): void
