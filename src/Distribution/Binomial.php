@@ -10,6 +10,8 @@ use InvalidArgumentException;
 
 final class Binomial implements DiscreteDistribution
 {
+    use DiscreteIndexSupport;
+
     private function __construct(
         private readonly int $trials,
         private readonly Number $probability,
@@ -58,17 +60,28 @@ final class Binomial implements DiscreteDistribution
             return Probability::of(0);
         }
 
-        $threshold = (int) $value->value();
-        if ($threshold < 0) {
-            return Probability::of(0);
-        }
+        $threshold = self::floorIndex($value);
         if ($threshold >= $this->trials) {
             return Probability::of(1);
         }
 
-        $sum = Number::of(0);
-        for ($k = 0; $k <= $threshold; $k++) {
-            $sum = $sum->add($this->pmf($k)->value());
+        if ($this->probability->compare(0) === 0) {
+            return Probability::of($threshold >= 0 ? 1 : 0);
+        }
+
+        if ($this->probability->compare(1) === 0) {
+            return Probability::of($threshold >= $this->trials ? 1 : 0);
+        }
+
+        $term = $this->pmf(0)->value();
+        $sum = $term;
+        for ($k = 0; $k < $threshold; $k++) {
+            $term = $term
+                ->mul(Number::of($this->trials - $k))
+                ->div(Number::of($k + 1))
+                ->mul($this->probability)
+                ->div(Number::of(1)->sub($this->probability));
+            $sum = $sum->add($term);
         }
 
         return Probability::of($sum);
@@ -85,4 +98,5 @@ final class Binomial implements DiscreteDistribution
             ->mul($this->probability)
             ->mul(Number::of(1)->sub($this->probability));
     }
+
 }

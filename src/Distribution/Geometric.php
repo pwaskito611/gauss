@@ -10,6 +10,8 @@ use InvalidArgumentException;
 
 final class Geometric implements DiscreteDistribution
 {
+    use DiscreteIndexSupport;
+
     private function __construct(
         private readonly Number $probability,
     ) {
@@ -44,12 +46,15 @@ final class Geometric implements DiscreteDistribution
             return Probability::of(0);
         }
 
-        $sum = Number::of(0);
-        for ($i = 1; $i <= (int) $k->value(); $i++) {
-            $sum = $sum->add($this->pmf($i)->value());
+        $limit = self::floorIndex($k);
+        if ($limit < 1) {
+            return Probability::of(0);
         }
 
-        return Probability::of($sum);
+        $failure = Number::of(1)->sub($this->probability);
+        $result = Number::of(1)->sub($failure->pow($limit));
+
+        return Probability::of($result);
     }
 
     public function expectation(): Number
@@ -63,4 +68,5 @@ final class Geometric implements DiscreteDistribution
 
         return $oneMinus->div($this->probability->pow(2));
     }
+
 }

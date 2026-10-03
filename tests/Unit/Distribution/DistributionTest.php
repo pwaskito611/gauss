@@ -37,11 +37,15 @@ final class DistributionTest extends TestCase
         self::assertSame('0', $distribution->pmf(2.5)->value()->value());
         self::assertSame('0', $distribution->pmf(-0.5)->value()->value());
         self::assertSame('0', $distribution->pmf(5.5)->value()->value());
+        self::assertSame('1', Binomial::of(5, '0')->pmf(0)->value()->value());
+        self::assertSame('1', Binomial::of(5, '1')->pmf(5)->value()->value());
         self::assertSame('0.5', $distribution->cdf(2)->value()->value());
         self::assertSame('0', $distribution->cdf(-0.5)->value()->value());
         self::assertSame('0.03125', $distribution->cdf(0.5)->value()->value());
         self::assertSame('0.5', $distribution->cdf(2.5)->value()->value());
         self::assertSame('1', $distribution->cdf(6)->value()->value());
+        self::assertSame('1', Binomial::of(5, '0')->cdf(0.9)->value()->value());
+        self::assertSame('0', Binomial::of(5, '1')->cdf(4.9)->value()->value());
         self::assertSame('2.5', $distribution->expectation()->value());
         self::assertSame('1.25', $distribution->variance()->value());
     }
@@ -56,7 +60,11 @@ final class DistributionTest extends TestCase
         self::assertSame('0', $distribution->pmf(1.5)->value()->value());
         self::assertSame('0', $distribution->pmf(0.5)->value()->value());
         self::assertSame('0', $distribution->pmf(-1)->value()->value());
+        self::assertSame('1', Geometric::of('1')->pmf(1)->value()->value());
         self::assertSame('0.75', $distribution->cdf(2)->value()->value());
+        self::assertSame('0.5', $distribution->cdf(1.5)->value()->value());
+        self::assertSame('1', Geometric::of('1')->cdf(1.5)->value()->value());
+        self::assertSame('0', Geometric::of('0.5')->cdf(-0.5)->value()->value());
         self::assertSame('2', $distribution->expectation()->value());
         self::assertSame('2', $distribution->variance()->value());
     }
@@ -71,6 +79,7 @@ final class DistributionTest extends TestCase
         self::assertSame('0', $distribution->pmf(0.5)->value()->value());
         self::assertSame('0', $distribution->pmf(1.9)->value()->value());
         self::assertSame('0', $distribution->pmf(-0.5)->value()->value());
+        self::assertSame(0, $distribution->cdf(2.7)->value()->compare('0.42319008112684351532441053302552510136944653360157'));
     }
 
     public function testUniformDistribution(): void

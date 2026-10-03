@@ -10,6 +10,13 @@ use InvalidArgumentException;
 
 final class Normal implements ContinuousDistribution
 {
+    private const A1 = '0.254829592';
+    private const A2 = '-0.284496736';
+    private const A3 = '1.421413741';
+    private const A4 = '-1.453152027';
+    private const A5 = '1.061405429';
+    private const P = '0.3275911';
+
     private function __construct(
         private readonly Number $mean,
         private readonly Number $standardDeviation,
@@ -85,6 +92,11 @@ final class Normal implements ContinuousDistribution
         return $this->standardDeviation->pow(2);
     }
 
+    /**
+     * Abramowitz-Stegun 7.1.26 approximation for erf(x).
+     * This remains a numerical approximation; Number precision does not imply
+     * exact transcendental values for the normal CDF.
+     */
     private function erfApprox(Number $x): Number
     {
         if ($x->compare(0) === 0) {
@@ -97,15 +109,16 @@ final class Normal implements ContinuousDistribution
 
         $abs = $x->abs();
 
-        $a1 = Number::of('0.254829592');
-        $a2 = Number::of('-0.284496736');
-        $a3 = Number::of('1.421413741');
-        $a4 = Number::of('-1.453152027');
-        $a5 = Number::of('1.061405429');
+        $a1 = Number::of(self::A1);
+        $a2 = Number::of(self::A2);
+        $a3 = Number::of(self::A3);
+        $a4 = Number::of(self::A4);
+        $a5 = Number::of(self::A5);
+        $p = Number::of(self::P);
 
         $t = Number::of(1)->div(
             Number::of(1)->add(
-                Number::of('0.3275911')->mul($abs)
+                $p->mul($abs)
             )
         );
 

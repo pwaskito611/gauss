@@ -10,6 +10,8 @@ use InvalidArgumentException;
 
 final class Poisson implements DiscreteDistribution
 {
+    use DiscreteIndexSupport;
+
     private function __construct(
         private readonly Number $rate,
     ) {
@@ -56,10 +58,16 @@ final class Poisson implements DiscreteDistribution
             return Probability::of(0);
         }
 
-        $sum = Number::of(0);
+        $limit = self::floorIndex($threshold);
+        if ($limit < 0) {
+            return Probability::of(0);
+        }
 
-        for ($k = 0; $k <= (int) $threshold->value(); $k++) {
-            $sum = $sum->add($this->pmf($k)->value());
+        $term = $this->rate->mul(Number::of(-1))->exp();
+        $sum = $term;
+        for ($k = 0; $k < $limit; $k++) {
+            $term = $term->mul($this->rate)->div(Number::of($k + 1));
+            $sum = $sum->add($term);
         }
 
         return Probability::of($sum);

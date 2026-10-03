@@ -42,7 +42,7 @@ final class Bernoulli implements DiscreteDistribution
         if ($value->compare(0) < 0) {
             return Probability::of(0);
         }
-        if ($value->compare(0) >= 0 && $value->compare(1) < 0) {
+        if ($value->compare(1) < 0) {
             return Probability::of(Number::of(1)->sub($this->probability));
         }
 

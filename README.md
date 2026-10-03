@@ -1,5 +1,3 @@
-Berikut versi full README dengan positioning tersebut dimasukkan secara natural, tanpa membuat Gauss seolah-olah merupakan library untuk AI.
-
 # Gauss
 
 A precise and composable mathematical toolkit for PHP, designed to build reliable mathematical models from reusable mathematical primitives.
