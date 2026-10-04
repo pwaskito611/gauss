@@ -27,6 +27,7 @@ final class SimpleExponentialSmoothing
         $values = $series->values();
         $smoothed = [];
         $level = $values[0];
+        $beta = Number::of(1)->sub($this->alpha);
         $smoothed[] = $level;
 
         foreach ($values as $index => $value) {
@@ -34,9 +35,7 @@ final class SimpleExponentialSmoothing
                 continue;
             }
 
-            $level = $this->alpha->mul($value)->add(
-                Number::of(1)->sub($this->alpha)->mul($level)
-            );
+            $level = $this->alpha->mul($value)->add($beta->mul($level));
             $smoothed[] = $level;
         }
 

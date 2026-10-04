@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Gauss\TimeSeries;
 
 use Gauss\Linear\Matrix;
+use Gauss\Linear\Solution\UniqueSolution;
 use Gauss\Linear\Vector;
 use Gauss\Number\Number;
 use Gauss\Statistics\Statistics;
@@ -84,8 +85,8 @@ final class TimeSeries
             throw new InvalidArgumentException('Slice start index is invalid.');
         }
 
-        if ($length !== null && $length < 0) {
-            throw new InvalidArgumentException('Slice length cannot be negative.');
+        if ($length !== null && $length <= 0) {
+            throw new InvalidArgumentException('Slice length must be positive.');
         }
 
         $end = $length === null ? $this->count() : min($this->count(), $start + $length);
@@ -167,6 +168,10 @@ final class TimeSeries
         return true;
     }
 
+    /**
+     * Computes the autocorrelation using the full-series sum of squared deviations as the normalization denominator.
+     * This is the biased definition with denominator n, not n-k.
+     */
     public function acf(int $lag): Number
     {
         if ($lag < 0) {
@@ -208,6 +213,10 @@ final class TimeSeries
         return $numerator->div($denominator);
     }
 
+    /**
+     * Solves the lagged normal equations for the partial autocorrelation at the requested lag.
+     * Singular designs raise an InvalidArgumentException instead of silently returning zero.
+     */
     public function pacf(int $lag): Number
     {
         if ($lag < 1) {
@@ -224,9 +233,6 @@ final class TimeSeries
             static fn (Number $value): Number => $value->sub($mean),
             $values,
         );
-        if ($this->count() <= $lag) {
-            throw new InvalidArgumentException('PACF requires enough observations for the requested lag.');
-        }
 
         $y = [];
         $design = [];
@@ -291,12 +297,8 @@ final class TimeSeries
             Vector::of(...$rhs)
         )->solve();
 
-        if (! $solution->hasSolution()) {
-            $fallback = [];
-            for ($column = 0; $column < $columnCount; $column++) {
-                $fallback[] = Number::of(0);
-            }
-            return $fallback;
+        if (! $solution instanceof UniqueSolution) {
+            throw new InvalidArgumentException('PACF regression does not have a unique solution.');
         }
 
         return $solution->vector()->values();

@@ -55,6 +55,26 @@ final class ARTest extends TestCase
         );
     }
 
+    public function testArPredictReturnsOnlyForecastObservations(): void
+    {
+        $series = TimeSeries::of([1, 2, 3, 4, 5, 6]);
+        $model = AR::fit($series, 1);
+
+        self::assertSame(3, $model->predict(3)->count());
+    }
+
+    public function testArUsesSeriesMeanWhenRegressionIsSingular(): void
+    {
+        $series = TimeSeries::of([5, 5, 5, 5, 5, 5]);
+        $model = AR::fit($series, 2);
+
+        self::assertSame(0, $model->intercept()->compare(Number::of(5)));
+        self::assertSame(2, count($model->coefficients()));
+        foreach ($model->coefficients() as $coefficient) {
+            self::assertSame(0, $coefficient->compare(Number::of(0)));
+        }
+    }
+
     public function testArRejectsInvalidOrder(): void
     {
         $this->expectException(InvalidArgumentException::class);

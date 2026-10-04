@@ -13,9 +13,19 @@ use Gauss\Statistics\Statistics;
 use Gauss\TimeSeries\TimeSeries;
 use InvalidArgumentException;
 
+/**
+ * Fits an ARMA(p, q) model without automatic stationarity or invertibility checks.
+ * The model remains a primitive fitting object; statistical assumptions are left to the caller.
+ */
 final class ARMA
 {
+    /**
+     * ARMA uses a separate numerical scale from MA because the joint parameter iteration
+     * has different convergence and residual precision needs.
+     */
     private const WORK_SCALE = 20;
+
+    private ?TimeSeries $cachedResiduals = null;
 
     /** @var list<Number> */
     private readonly array $arCoefficients;
@@ -109,7 +119,7 @@ final class ARMA
             }
         }
 
-        return new self(
+        $model = new self(
             $arOrder,
             $maOrder,
             $arCoefficients,
@@ -117,6 +127,9 @@ final class ARMA
             $intercept,
             $series,
         );
+        $model->cachedResiduals = $model->computeResiduals();
+
+        return $model;
     }
 
     public function arOrder(): int
@@ -154,6 +167,7 @@ final class ARMA
 
         $history = $this->series->values();
         $residuals = $this->residuals()->values();
+        $forecast = [];
 
         for ($step = 0; $step < $horizon; $step++) {
             $prediction = $this->intercept;
@@ -169,14 +183,24 @@ final class ARMA
                     $prediction = $prediction->add($this->maCoefficients[$lag - 1]->mul($residuals[$index]));
                 }
             }
+            $forecast[] = $prediction;
             $history[] = $prediction;
             $residuals[] = Number::of(0);
         }
 
-        return TimeSeries::of($history);
+        return TimeSeries::of($forecast);
     }
 
     public function residuals(): TimeSeries
+    {
+        if ($this->cachedResiduals === null) {
+            $this->cachedResiduals = $this->computeResiduals();
+        }
+
+        return $this->cachedResiduals;
+    }
+
+    private function computeResiduals(): TimeSeries
     {
         $values = $this->series->values();
         $residuals = self::calculateResiduals(

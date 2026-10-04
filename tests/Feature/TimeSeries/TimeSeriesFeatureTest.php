@@ -24,6 +24,6 @@ final class TimeSeriesFeatureTest extends TestCase
         self::assertInstanceOf(Number::class, $difference->variance());
         self::assertInstanceOf(Number::class, $series->acf(1));
         self::assertSame(8, $model->residuals()->count());
-        self::assertSame(12, $forecast->count());
+        self::assertSame(2, $forecast->count());
     }
 }

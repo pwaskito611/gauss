@@ -78,9 +78,18 @@ final class TimeSeriesAdvancedTest extends TestCase
                 ->abs()
                 ->compare('0.000000000001')
         );
+    }
 
-        $zeroMape = MAPE::calculate([0, 0, 0], [0, 0, 0]);
-        self::assertSame(0, $zeroMape->compare(Number::of(0)));
+    public function testForecastingMetricsRejectEmptyInputsAndZeroActual(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        MAE::calculate([], []);
+    }
+
+    public function testMapeRejectsZeroActualValues(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        MAPE::calculate([10, 0, 10], [10, 10, 10]);
     }
 
     public function testSeriesConstantAndLagValidationGuardrails(): void
@@ -108,5 +117,28 @@ final class TimeSeriesAdvancedTest extends TestCase
         $shifted = TimeSeries::of([101, 102, 103, 105, 104, 107, 106, 109]);
 
         self::assertLessThanOrEqual(0, $series->pacf(2)->sub($shifted->pacf(2))->abs()->compare('0.000000000001'));
+    }
+
+    public function testSliceRejectsZeroLength(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        TimeSeries::of([1, 2, 3])->slice(1, 0);
+    }
+
+    public function testMovingAverageUsesPartialTrailingWindow(): void
+    {
+        $series = TimeSeries::of([1, 2, 3, 4]);
+        $smoothed = MovingAverage::smooth($series, 3);
+
+        self::assertSame(0, $smoothed->valueAt(0)->compare(Number::of(1)));
+        self::assertSame(0, $smoothed->valueAt(1)->compare(Number::of('1.5')));
+        self::assertSame(0, $smoothed->valueAt(2)->compare(Number::of(2)));
+        self::assertSame(0, $smoothed->valueAt(3)->compare(Number::of(3)));
+    }
+
+    public function testPacfRejectsSingularRegression(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        TimeSeries::of([1, 1, 1, 1])->pacf(1);
     }
 }

@@ -6,11 +6,17 @@ namespace Gauss\TimeSeries\Model;
 
 use Gauss\Linear\LinearSystem;
 use Gauss\Linear\Matrix;
+use Gauss\Linear\Solution\UniqueSolution;
 use Gauss\Linear\Vector;
 use Gauss\Number\Number;
+use Gauss\Statistics\Statistics;
 use Gauss\TimeSeries\TimeSeries;
 use InvalidArgumentException;
 
+/**
+ * Fits an AR(p) model without enforcing stationarity or forecast-stability checks.
+ * Model validity remains the responsibility of the caller after fitting.
+ */
 final class AR
 {
     /** @var list<Number> */
@@ -81,13 +87,14 @@ final class AR
 
         $coefficients = [];
         $intercept = Number::of(0);
-        if ($solution->hasSolution()) {
+        if ($solution instanceof UniqueSolution) {
             $vector = $solution->vector()->values();
             $intercept = $vector[0];
             for ($lag = 1; $lag < count($vector); $lag++) {
                 $coefficients[] = $vector[$lag];
             }
         } else {
+            $intercept = Statistics::mean($values);
             foreach (range(1, $order) as $lag) {
                 $coefficients[] = Number::of(0);
             }
@@ -119,6 +126,7 @@ final class AR
         }
 
         $history = $this->series->values();
+        $forecast = [];
         for ($step = 0; $step < $horizon; $step++) {
             $prediction = $this->intercept;
             for ($lag = 1; $lag <= $this->order; $lag++) {
@@ -127,10 +135,11 @@ final class AR
                     $prediction = $prediction->add($this->coefficients[$lag - 1]->mul($history[$index]));
                 }
             }
+            $forecast[] = $prediction;
             $history[] = $prediction;
         }
 
-        return TimeSeries::of($history);
+        return TimeSeries::of($forecast);
     }
 
     public function residuals(): TimeSeries

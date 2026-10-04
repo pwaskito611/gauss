@@ -15,6 +15,10 @@ final class MAE
      */
     public static function calculate(array $actual, array $predicted): Number
     {
+        if ($actual === [] || $predicted === []) {
+            throw new InvalidArgumentException('Actual and predicted series must not be empty.');
+        }
+
         if (count($actual) !== count($predicted)) {
             throw new InvalidArgumentException('Actual and predicted series must have the same length.');
         }

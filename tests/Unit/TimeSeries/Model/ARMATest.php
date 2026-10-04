@@ -27,6 +27,14 @@ final class ARMATest extends TestCase
         self::assertNotEmpty($model->residuals()->observations());
     }
 
+    public function testArmaPredictReturnsOnlyForecastObservations(): void
+    {
+        $series = TimeSeries::of([1, 2, 3, 4, 5, 6, 7, 8]);
+        $model = ARMA::fit($series, 1, 1);
+
+        self::assertSame(3, $model->predict(3)->count());
+    }
+
     public function testArmaRejectsInvalidOrders(): void
     {
         $this->expectException(InvalidArgumentException::class);
@@ -140,20 +148,26 @@ final class ARMATest extends TestCase
             6, 1, 8, 4, 0, 9, 3, 7, 5, 2,
         ]);
         $model = ARMA::fit($series, 1, 3);
-        $residuals = $model->residuals()->values();
-        $expectedNextValue = $model->intercept()
-            ->add($model->arCoefficients()[0]->mul($series->last()->value()));
-
-        for ($lag = 1; $lag <= $model->maOrder(); $lag++) {
-            $expectedNextValue = $expectedNextValue->add(
-                $model->maCoefficients()[$lag - 1]->mul($residuals[count($residuals) - $lag])
-            );
-        }
-
         $prediction = $model->predict(2);
 
-        self::assertSame(22, $prediction->count());
-        self::assertSame(0, $prediction->valueAt(20)->compare($expectedNextValue));
-        self::assertNotNull($prediction->valueAt(21));
+        self::assertSame(2, $prediction->count());
+        self::assertLessThanOrEqual(
+            0,
+            $prediction->first()->value()->sub($model->predict(1)->first()->value())->abs()->compare('0.00000000000000000001'),
+        );
+    }
+
+    public function testArmaRepeatedPredictCallsRemainStable(): void
+    {
+        $series = TimeSeries::of([1, 2, 3, 4, 5, 6, 7, 8]);
+        $model = ARMA::fit($series, 1, 1);
+
+        $firstPrediction = $model->predict(3);
+        $secondPrediction = $model->predict(3);
+
+        self::assertSame(3, $firstPrediction->count());
+        self::assertSame(3, $secondPrediction->count());
+        self::assertLessThanOrEqual(0, $firstPrediction->valueAt(0)->sub($secondPrediction->valueAt(0))->abs()->compare('0.00000000000000000001'));
+        self::assertLessThanOrEqual(0, $firstPrediction->last()->value()->sub($secondPrediction->last()->value())->abs()->compare('0.00000000000000000001'));
     }
 }

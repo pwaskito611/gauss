@@ -40,7 +40,7 @@ final class TimeSeriesModelIntegrationTest extends TestCase
         self::assertInstanceOf(Number::class, $mean);
         self::assertSame(27, $residuals->count());
         self::assertInstanceOf(Number::class, Statistics::mean($residuals->values()));
-        self::assertSame(32, $forecast->count());
+        self::assertSame(2, $forecast->count());
         self::assertInstanceOf(Number::class, $forecast->last()->value());
     }
 }

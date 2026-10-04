@@ -8,6 +8,10 @@ use Gauss\Number\Number;
 use Gauss\TimeSeries\TimeSeries;
 use InvalidArgumentException;
 
+/**
+ * Computes a trailing moving average using a partial window at the beginning of the series.
+ * For example, with window=3, the first values are averaged over [x0], [x0, x1], [x0, x1, x2].
+ */
 final class MovingAverage
 {
     public function __construct(private readonly int $window)
@@ -33,18 +37,18 @@ final class MovingAverage
             throw new InvalidArgumentException('Moving average window cannot exceed the series length.');
         }
 
+        $values = $series->values();
         $smoothed = [];
-        for ($index = 0; $index < $series->count(); $index++) {
-            $start = max(0, $index - $this->window + 1);
-            $windowValues = [];
-            for ($offset = $start; $offset <= $index; $offset++) {
-                $windowValues[] = $series->valueAt($offset);
+        $sum = Number::of(0);
+
+        for ($index = 0; $index < count($values); $index++) {
+            if ($index >= $this->window) {
+                $sum = $sum->sub($values[$index - $this->window]);
             }
-            $sum = Number::of(0);
-            foreach ($windowValues as $value) {
-                $sum = $sum->add($value);
-            }
-            $smoothed[] = $sum->div(Number::of(count($windowValues)));
+
+            $sum = $sum->add($values[$index]);
+            $windowSize = min($this->window, $index + 1);
+            $smoothed[] = $sum->div(Number::of($windowSize));
         }
 
         return TimeSeries::of($smoothed);

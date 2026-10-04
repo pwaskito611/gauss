@@ -6,14 +6,23 @@ namespace Gauss\TimeSeries\Model;
 
 use Gauss\Linear\LinearSystem;
 use Gauss\Linear\Matrix;
+use Gauss\Linear\Solution\UniqueSolution;
 use Gauss\Linear\Vector;
 use Gauss\Number\Number;
 use Gauss\Statistics\Statistics;
 use Gauss\TimeSeries\TimeSeries;
 use InvalidArgumentException;
 
+/**
+ * Fits an MA(q) model without enforcing invertibility checks.
+ * Forecasting follows the fitted coefficients exactly; caller-side validation is separate.
+ */
 final class MA
 {
+    /**
+     * The MA residual iteration is more sensitive to truncation than the AR fit, so this
+     * scale is intentionally kept separate from the ARMA implementation.
+     */
     private const WORK_SCALE = 50;
     private const MAX_ITERATIONS = 10;
     private const CONVERGENCE_TOLERANCE = '0.000000000001';
@@ -103,7 +112,7 @@ final class MA
                 Vector::of(...$xty)
             )->solve();
 
-            if (! $solution->hasSolution()) {
+            if (! $solution instanceof UniqueSolution) {
                 break;
             }
 
@@ -171,22 +180,22 @@ final class MA
             throw new InvalidArgumentException('Prediction horizon must be at least 1.');
         }
 
-        $history = $this->series->values();
         $residuals = $this->residuals()->values();
+        $forecast = [];
 
         for ($step = 0; $step < $horizon; $step++) {
-            $forecast = $this->mean;
+            $prediction = $this->mean;
             for ($lag = 1; $lag <= $this->order; $lag++) {
                 $residualIndex = count($residuals) - $lag;
                 if ($residualIndex >= 0) {
-                    $forecast = $forecast->add($this->coefficients[$lag - 1]->mul($residuals[$residualIndex]));
+                    $prediction = $prediction->add($this->coefficients[$lag - 1]->mul($residuals[$residualIndex]));
                 }
             }
-            $history[] = $forecast;
+            $forecast[] = $prediction;
             $residuals[] = Number::of(0);
         }
 
-        return TimeSeries::of($history);
+        return TimeSeries::of($forecast);
     }
 
     public function residuals(): TimeSeries

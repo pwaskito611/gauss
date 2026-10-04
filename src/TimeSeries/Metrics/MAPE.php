@@ -7,6 +7,11 @@ namespace Gauss\TimeSeries\Metrics;
 use Gauss\Number\Number;
 use InvalidArgumentException;
 
+/**
+ * Computes the mean absolute percentage error.
+ * This implementation treats MAPE as undefined when any actual value is zero and raises
+ * InvalidArgumentException instead of silently skipping or replacing the zero observation.
+ */
 final class MAPE
 {
     /**
@@ -15,27 +20,25 @@ final class MAPE
      */
     public static function calculate(array $actual, array $predicted): Number
     {
+        if ($actual === [] || $predicted === []) {
+            throw new InvalidArgumentException('Actual and predicted series must not be empty.');
+        }
+
         if (count($actual) !== count($predicted)) {
             throw new InvalidArgumentException('Actual and predicted series must have the same length.');
         }
 
         $sum = Number::of(0);
-        $count = 0;
         foreach ($actual as $index => $value) {
             $actualValue = Number::of($value);
-            $predictedValue = Number::of($predicted[$index]);
             if ($actualValue->compare(Number::of(0)) === 0) {
-                continue;
+                throw new InvalidArgumentException('MAPE is undefined when actual values are zero.');
             }
+            $predictedValue = Number::of($predicted[$index]);
             $difference = $actualValue->sub($predictedValue)->abs()->div($actualValue->abs());
             $sum = $sum->add($difference);
-            $count++;
         }
 
-        if ($count === 0) {
-            return Number::of(0);
-        }
-
-        return $sum->div(Number::of($count))->mul(Number::of(100));
+        return $sum->div(Number::of(count($actual)))->mul(Number::of(100));
     }
 }

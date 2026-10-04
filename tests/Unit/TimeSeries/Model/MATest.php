@@ -23,6 +23,14 @@ final class MATest extends TestCase
         self::assertNotEmpty($model->residuals()->observations());
     }
 
+    public function testMaPredictReturnsOnlyForecastObservations(): void
+    {
+        $series = TimeSeries::of([1, 2, 3, 4, 5, 6]);
+        $model = MA::fit($series, 1);
+
+        self::assertSame(4, $model->predict(4)->count());
+    }
+
     public function testMaRejectsInvalidOrder(): void
     {
         $this->expectException(InvalidArgumentException::class);
