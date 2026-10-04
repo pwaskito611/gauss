@@ -93,6 +93,13 @@ final class Relation
         return self::of($pairs);
     }
 
+    /**
+     * Compose using the library's established contract: "other after this".
+     *
+     * For every pair (a, b) in this relation and (b, c) in the other relation,
+     * the composed relation contains (a, c). This is equivalent to the current
+     * public semantics of "other ∘ this".
+     */
     public function compose(self $other): self
     {
         $pairs = [];

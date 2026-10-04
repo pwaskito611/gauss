@@ -89,6 +89,7 @@ final class NumberTheoryTest extends TestCase
         self::assertSame('4', ModularArithmetic::add(Number::of(7), Number::of(9), Number::of(12))->value());
         self::assertSame('10', ModularArithmetic::subtract(Number::of(7), Number::of(9), Number::of(12))->value());
         self::assertSame('3', ModularArithmetic::multiply(Number::of(7), Number::of(9), Number::of(12))->value());
+        self::assertSame('0', ModularArithmetic::power(Number::of(3), Number::of(0), Number::of(1))->value());
         self::assertSame('5', ModularArithmetic::power(Number::of(3), Number::of(5), Number::of(7))->value());
         self::assertSame(
             '1',

@@ -34,7 +34,7 @@ final class ModularArithmetic
             throw new InvalidArgumentException('Modular power exponent must be non-negative.');
         }
 
-        $result = Number::of(1);
+        $result = self::normalize(Number::of(1), $modulus);
         $base = self::normalize($a, $modulus);
         $power = $exponent;
 
