@@ -25,7 +25,7 @@ Examples of primitives in the project include:
 
 ## HSMM as a technical case study
 
-A Hidden Semi-Markov Model can be built without a native `Hsmm` class in the library. A user can compose:
+An HSMM-inspired custom model can be built without a native `Hsmm` class in the library. A user can compose:
 
 - `Number` for arithmetic
 - `Probability` for constrained values
@@ -33,7 +33,7 @@ A Hidden Semi-Markov Model can be built without a native `Hsmm` class in the lib
 - `Vector` for parameter storage
 - `Matrix` for transitions and duration matrices
 
-The model is then assembled using normal application logic. This is the practical expression of Gauss composability.
+The model is then assembled using normal application logic. This is the practical expression of Gauss composability, but it is intentionally presented as a custom construction rather than as a claim that Gauss ships a full HSMM implementation.
 
 ## Why this matters
 

@@ -1,8 +1,32 @@
 # HSMM Example
 
-This example shows a complete Hidden Semi-Markov Model built from Gauss primitives. The goal is not to claim that Gauss ships a built-in HSMM abstraction, but to show that a user can compose the library’s primitives into a custom probabilistic model.
+This page documents a custom explicit-duration Hidden Semi-Markov Model built from Gauss primitives. The intent is to show how to assemble the right model components from reusable math primitives without claiming that Gauss ships a built-in `HiddenSemiMarkovModel` abstraction.
 
 ## Mathematical formulation
+
+A hidden semi-Markov model explicitly models the duration of each state segment. The core ingredients are:
+
+- initial state probability: $\pi_s$
+- transition probability: $A_{i,j}$
+- emission probability: $b_s(O_t)$
+- duration probability: $p(d \mid s)$
+- segment boundaries: $(s, start, end)$
+
+For a segment spanning `start` to `end`, the duration is inclusive:
+
+$$
+d = end - start + 1
+$$
+
+A single segment contribution is:
+
+$$
+E(s, start, end) = p(d \mid s) \times \prod_{t=start}^{end} b_s(O_t)
+$$
+
+The forward pass marginalizes over all valid segmentations, and the Viterbi pass maximizes over all valid segmentations while tracking backpointers for state and duration.
+
+## Example setup
 
 A minimal HSMM-style model can be described with:
 
@@ -32,13 +56,7 @@ Observations:
   [0, 1, 3, 2, 1, 0]
 ```
 
-For a segment of duration $d$ in state $s$, the segment probability is:
-
-$$
-P(segment \mid s) = P(duration \mid s) \times \prod_{t \in segment} P(observation_t \mid s)
-$$
-
-The forward pass combines previous state probability, transition probability, and the current segment probability. The Viterbi algorithm then finds the highest-probability path through the state segments.
+The segment length for `start = 1` and `end = 3` is `3`, not `2`.
 
 ## Full implementation
 
@@ -98,7 +116,12 @@ final class HiddenSemiMarkovModel
     }
 
     /**
-     * @return array{state:string, start:int, end:int, probability: Number}
+     * Local segment contribution for a single state-duration segment:
+     *
+     *     P(d | s) * \prod_{t=start}^{end} b_s(O_t)
+     *
+     * This is not the full segmentation probability because it excludes the
+     * initial state term and any transition terms between segments.
      */
     public function segmentProbabilities(): array
     {
@@ -107,33 +130,15 @@ final class HiddenSemiMarkovModel
 
         for ($start = 0; $start < $count; $start++) {
             for ($end = $start; $end < $count; $end++) {
-                $segment = array_slice($this->observations, $start, $end - $start + 1);
-                $segmentValue = Number::of(1);
-                $durationProbability = Number::of(1);
+                $duration = $end - $start + 1;
 
                 foreach ($this->states as $state) {
-                    $stateDuration = Number::of(0);
-                    foreach ($this->durations[$state] as $index => $weight) {
-                        if ($index === $end - $start) {
-                            $stateDuration = $weight;
-                            break;
-                        }
-                    }
-
-                    $durationProbability = $stateDuration;
-                    $emissionProbability = Number::of(1);
-                    foreach ($segment as $value) {
-                        $emissionProbability = $emissionProbability->mul(
-                            $this->emissions[$state]->pmf($value)->value()
-                        );
-                    }
-                    $segmentValue = $durationProbability->mul($emissionProbability);
-
                     $segments[] = [
                         'state' => $state,
                         'start' => $start,
                         'end' => $end,
-                        'probability' => $segmentValue,
+                        'duration' => $duration,
+                        'probability' => $this->segmentContribution($state, $start, $end),
                     ];
                 }
             }
@@ -142,87 +147,188 @@ final class HiddenSemiMarkovModel
         return $segments;
     }
 
+    /**
+     * Forward probability with explicit duration modeling.
+     *
+     * alpha[t][j] = sum over valid segment lengths d and predecessor states of:
+     *
+     *     E(j, t-d+1, t) * (pi_j if t-d+1 == 0 else sum_i alpha[t-d][i] * A[i,j])
+     */
     public function forward(): array
     {
         $count = count($this->observations);
-        $forward = [];
+        $forward = array_fill(0, $count, []);
 
-        foreach ($this->states as $state) {
-            $initial = $this->initial[$state] ?? Number::of(0);
-            $forward[0][$state] = $initial;
-        }
-
-        for ($i = 0; $i < $count; $i++) {
+        for ($t = 0; $t < $count; $t++) {
             foreach ($this->states as $state) {
-                $best = Number::of(0);
-                foreach ($this->states as $previousState) {
-                    $transition = $this->transitions[$previousState][$state] ?? Number::of(0);
-                    $value = ($forward[$i][$previousState] ?? Number::of(0))->mul($transition);
-                    if ($value->compare($best) > 0) {
-                        $best = $value;
+                $total = Number::of(0);
+
+                for ($duration = 1; $duration <= $t + 1; $duration++) {
+                    $start = $t - $duration + 1;
+                    $segmentScore = $this->segmentContribution($state, $start, $t);
+
+                    if ($segmentScore->compare(0) === 0) {
+                        continue;
                     }
+
+                    if ($start === 0) {
+                        $candidate = ($this->initial[$state] ?? Number::of(0))->mul($segmentScore);
+                    } else {
+                        $previousValue = Number::of(0);
+                        foreach ($this->states as $previousState) {
+                            $previousValue = $previousValue->add(
+                                ($forward[$start - 1][$previousState] ?? Number::of(0))
+                                    ->mul($this->transitions[$previousState][$state] ?? Number::of(0))
+                            );
+                        }
+
+                        $candidate = $previousValue->mul($segmentScore);
+                    }
+
+                    $total = $total->add($candidate);
                 }
 
-                $segmentProbability = Number::of(1);
-                foreach (array_slice($this->observations, $i, 1) as $observation) {
-                    $segmentProbability = $segmentProbability->mul(
-                        $this->emissions[$state]->pmf($observation)->value()
-                    );
-                }
-
-                $forward[$i + 1][$state] = $best->mul($segmentProbability);
+                $forward[$t][$state] = $total;
             }
         }
 
         return $forward;
     }
 
+    /**
+     * Viterbi with explicit duration and backpointer tracking.
+     *
+     * @return array{score:Number, segments:array<int, array{state:string, start:int, end:int, duration:int}>}
+     */
     public function viterbi(): array
     {
         $count = count($this->observations);
-        $dp = [];
-        $paths = [];
+        $delta = array_fill(0, $count, []);
+        $backpointer = array_fill(0, $count, []);
 
-        foreach ($this->states as $state) {
-            $dp[0][$state] = $this->initial[$state] ?? Number::of(0);
-            $paths[0][$state] = [$state];
-        }
-
-        for ($i = 1; $i < $count; $i++) {
+        for ($t = 0; $t < $count; $t++) {
             foreach ($this->states as $state) {
-                $bestScore = Number::of(0);
-                $bestPrevious = null;
+                $bestScore = null;
+                $bestPreviousState = null;
+                $bestPreviousTime = null;
+                $bestDuration = null;
 
-                foreach ($this->states as $previousState) {
-                    $candidate = ($dp[$i - 1][$previousState] ?? Number::of(0))
-                        ->mul($this->transitions[$previousState][$state] ?? Number::of(0));
+                for ($duration = 1; $duration <= $t + 1; $duration++) {
+                    $start = $t - $duration + 1;
+                    $segmentScore = $this->segmentContribution($state, $start, $t);
 
-                    if ($bestPrevious === null || $candidate->compare($bestScore) > 0) {
+                    if ($segmentScore->compare(0) === 0) {
+                        continue;
+                    }
+
+                    if ($start === 0) {
+                        $candidate = ($this->initial[$state] ?? Number::of(0))->mul($segmentScore);
+                        $bestPreviousStateCandidate = null;
+                    } else {
+                        $bestPrevious = null;
+                        $bestPreviousStateCandidate = null;
+
+                        foreach ($this->states as $previousState) {
+                            $score = ($delta[$start - 1][$previousState] ?? Number::of(0))
+                                ->mul($this->transitions[$previousState][$state] ?? Number::of(0));
+
+                            if ($bestPrevious === null || $score->compare($bestPrevious) > 0) {
+                                $bestPrevious = $score;
+                                $bestPreviousStateCandidate = $previousState;
+                            }
+                        }
+
+                        if ($bestPrevious === null) {
+                            continue;
+                        }
+
+                        $candidate = $bestPrevious->mul($segmentScore);
+                    }
+
+                    if ($bestScore === null || $candidate->compare($bestScore) > 0) {
                         $bestScore = $candidate;
-                        $bestPrevious = $previousState;
+                        $bestPreviousState = $bestPreviousStateCandidate;
+                        $bestPreviousTime = $start === 0 ? null : $start - 1;
+                        $bestDuration = $duration;
                     }
                 }
 
-                $observationProbability = $this->emissions[$state]->pmf($this->observations[$i])->value();
-                $dp[$i][$state] = $bestScore->mul($observationProbability);
-                $paths[$i][$state] = array_merge($paths[$i - 1][$bestPrevious], [$state]);
+                if ($bestScore !== null) {
+                    $delta[$t][$state] = $bestScore;
+                    $backpointer[$t][$state] = [
+                        'previousState' => $bestPreviousState,
+                        'previousTime' => $bestPreviousTime,
+                        'duration' => $bestDuration,
+                    ];
+                }
             }
         }
 
         $bestFinalState = null;
-        $bestFinalScore = Number::of(0);
+        $bestFinalScore = null;
         foreach ($this->states as $state) {
-            $score = $dp[$count - 1][$state] ?? Number::of(0);
-            if ($bestFinalState === null || $score->compare($bestFinalScore) > 0) {
+            $score = $delta[$count - 1][$state] ?? Number::of(0);
+            if ($bestFinalScore === null || $score->compare($bestFinalScore) > 0) {
                 $bestFinalState = $state;
                 $bestFinalScore = $score;
             }
         }
 
+        $segments = [];
+        $state = $bestFinalState;
+        $timeIndex = $count - 1;
+
+        while ($state !== null && $timeIndex >= 0) {
+            $info = $backpointer[$timeIndex][$state] ?? null;
+            if ($info === null) {
+                break;
+            }
+
+            $segments[] = [
+                'state' => $state,
+                'start' => $timeIndex - $info['duration'] + 1,
+                'end' => $timeIndex,
+                'duration' => $info['duration'],
+            ];
+
+            if ($info['previousState'] === null) {
+                break;
+            }
+
+            $state = $info['previousState'];
+            $timeIndex = $info['previousTime'];
+        }
+
+        $segments = array_reverse($segments);
+
         return [
-            'score' => $bestFinalScore,
-            'path' => $paths[$count - 1][$bestFinalState],
+            'score' => $bestFinalScore ?? Number::of(0),
+            'segments' => $segments,
         ];
+    }
+
+    private function segmentContribution(string $state, int $start, int $end): Number
+    {
+        $duration = $end - $start + 1;
+        $durationProbability = $this->durationProbability($state, $duration);
+        $emissionProbability = Number::of(1);
+
+        for ($index = $start; $index <= $end; $index++) {
+            $emissionProbability = $emissionProbability->mul(
+                $this->emissions[$state]->pmf($this->observations[$index])->value()
+            );
+        }
+
+        return $durationProbability->mul($emissionProbability);
+    }
+
+    private function durationProbability(string $state, int $duration): Number
+    {
+        if ($duration < 1) {
+            return Number::of(0);
+        }
+
+        return $this->durations[$state][$duration] ?? Number::of(0);
     }
 }
 
@@ -278,26 +384,25 @@ $segments = $model->segmentProbabilities();
 
 var_export([
     'observations' => $observations,
-    'likelihood' => $forward[count($forward) - 1],
-    'viterbi_probability' => $viterbi['score']->value(),
-    'viterbi_path' => $viterbi['path'],
-    'viterbi_segments' => $segments,
-    'forward_final' => $forward[count($forward) - 1],
+    'segment_scores' => $segments,
+    'forward_final_state_scores' => $forward[count($forward) - 1],
+    'viterbi_score' => $viterbi['score']->value(),
+    'viterbi_segments' => $viterbi['segments'],
 ]);
 ```
 
 ## Output verification
 
-The actual runtime output from this example will vary with the exact code path and implementation details, but the example demonstrates the complete flow from data definition to model construction, forward calculation, and Viterbi path selection.
+This example exercises the core HSMM mechanics explicitly: segment contributions, initial state handling, transition-weighted continuation, and duration-aware Viterbi backtracking. The exact numeric values depend on the model parameters, but the structure of the result is the important part.
 
 ## Why this example matters
 
-This example matters because it proves a practical point: Gauss does not need a built-in HSMM abstraction to support advanced model construction. A user can assemble a custom model from:
+This example matters because it proves a practical point: Gauss does not need a built-in HSMM abstraction to support advanced model construction. A user can assemble a custom explicit-duration model from:
 
-- `Number` for arithmetic precision
-- `Probability` for valid probability ranges
-- `Poisson` for emissions
+- `Number` for precise arithmetic
+- `Probability` for constrained values
+- `Poisson` for emission probabilities
 - `Vector` and `Matrix` for parameter storage and transitions
-- mathematical logic for forward and Viterbi reasoning
+- explicit HSMM logic for segment evaluation, forward aggregation, and Viterbi backtracking
 
-This is the key Gauss composition pattern: small primitives, explicit numerical behaviour, and custom model assembly.
+This is the key Gauss composition pattern: small primitives, explicit numerical behavior, and a mathematically meaningful model built from them.

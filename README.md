@@ -178,11 +178,11 @@ echo $pmf->value()->value();
 
 ### Example 3 — Complex model
 
-The repository includes a full end-to-end HSMM-style example in the usage documentation:
+The repository includes an HSMM-inspired composition example in the usage documentation:
 
 * [docs/usage/examples/hsmm.md](docs/usage/examples/hsmm.md)
 
-It demonstrates how Gauss primitives can be assembled into a larger probabilistic model rather than being limited to isolated formulas.
+It demonstrates how Gauss primitives can be assembled into a larger probabilistic model without claiming that Gauss ships a built-in HSMM engine or a full production HSMM implementation.
 
 ## Documentation
 
