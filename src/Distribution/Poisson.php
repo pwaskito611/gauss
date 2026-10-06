@@ -8,6 +8,12 @@ use Gauss\Number\Number;
 use Gauss\Probability\Probability;
 use InvalidArgumentException;
 
+/**
+ * Poisson distribution with positive rate lambda.
+ *
+ * If X ~ Poisson(lambda), then X takes values in {0, 1, 2, ...} and the PMF is
+ * P(X = k) = e^{-lambda} lambda^k / k!.
+ */
 final class Poisson implements DiscreteDistribution
 {
     use DiscreteIndexSupport;
@@ -20,11 +26,23 @@ final class Poisson implements DiscreteDistribution
         }
     }
 
+    /**
+     * Creates a Poisson distribution with positive rate lambda.
+     *
+     * @param int|float|string|Number $rate Rate parameter lambda; valid values satisfy lambda > 0.
+     *
+     * @throws InvalidArgumentException If rate <= 0.
+     */
     public static function of(int|float|string|Number $rate): self
     {
         return new self(Number::of($rate));
     }
 
+    /**
+     * Returns the probability mass at x.
+     *
+     * Inputs that are not non-negative integers return 0.
+     */
     public function pmf(int|float|string|Number $x): Probability
     {
         $k = Number::of($x);
@@ -50,6 +68,11 @@ final class Poisson implements DiscreteDistribution
         return Probability::of($value);
     }
 
+    /**
+     * Returns the cumulative probability P(X <= x).
+     *
+     * Negative x return 0; for x >= 0 the implementation sums terms from k = 0 to floor(x).
+     */
     public function cdf(int|float|string|Number $x): Probability
     {
         $threshold = Number::of($x);
@@ -73,16 +96,25 @@ final class Poisson implements DiscreteDistribution
         return Probability::of($sum);
     }
 
+    /**
+     * Returns the expectation E[X] = lambda.
+     */
     public function expectation(): Number
     {
         return $this->rate;
     }
 
+    /**
+     * Returns the variance Var(X) = lambda.
+     */
     public function variance(): Number
     {
         return $this->rate;
     }
 
+    /**
+     * Computes n! for non-negative integer n.
+     */
     private function factorial(int $n): Number
     {
         $result = Number::of(1);

@@ -8,6 +8,13 @@ use Gauss\Number\Number;
 use Gauss\Probability\Probability;
 use InvalidArgumentException;
 
+/**
+ * Normal distribution with mean mu and standard deviation sigma > 0.
+ *
+ * The density is the Gaussian bell curve and the CDF is computed via the
+ * Abramowitz-Stegun erf approximation. This is a numerical approximation of the
+ * normal CDF, not an exact symbolic evaluation.
+ */
 final class Normal implements ContinuousDistribution
 {
     private const A1 = '0.254829592';
@@ -28,6 +35,14 @@ final class Normal implements ContinuousDistribution
         }
     }
 
+    /**
+     * Creates a normal distribution with mean mu and positive standard deviation sigma.
+     *
+     * @param int|float|string|Number $mean Mean value mu.
+     * @param int|float|string|Number $standardDeviation Standard deviation sigma; must be > 0.
+     *
+     * @throws InvalidArgumentException If sigma <= 0.
+     */
     public static function of(
         int|float|string|Number $mean,
         int|float|string|Number $standardDeviation
@@ -38,6 +53,9 @@ final class Normal implements ContinuousDistribution
         );
     }
 
+    /**
+     * Returns the Gaussian density at x.
+     */
     public function pdf(int|float|string|Number $x): Number
     {
         $value = Number::of($x);
@@ -61,6 +79,12 @@ final class Normal implements ContinuousDistribution
             ->mul($exponent);
     }
 
+    /**
+     * Returns the cumulative probability P(X <= x).
+     *
+     * The implementation evaluates the standard normal CDF via the Abramowitz–Stegun
+     * 7.1.26 approximation for erf(x).
+     */
     public function cdf(int|float|string|Number $x): Probability
     {
         $value = Number::of($x);
@@ -82,11 +106,17 @@ final class Normal implements ContinuousDistribution
         return Probability::of($cdf);
     }
 
+    /**
+     * Returns the expectation E[X] = mu.
+     */
     public function expectation(): Number
     {
         return $this->mean;
     }
 
+    /**
+     * Returns the variance Var(X) = sigma^2.
+     */
     public function variance(): Number
     {
         return $this->standardDeviation->pow(2);
