@@ -10,9 +10,11 @@ Gauss does not reduce every mathematical concept to a raw PHP scalar. Instead, i
 - `Matrix` for rectangular numeric collections
 - `Distribution` objects for probabilistic laws
 
+These objects are composed by domain-specific algorithms; not every API input is itself a value object (for example, numerical and optimization routines accept user-supplied callables).
+
 ## Why not just float?
 
-A plain `float` makes it too easy to lose semantic intent. A probability of `0.5` is not just any number; it is a probability. A matrix entry is not just a scalar; it is part of a structured numeric context.
+A plain `float` makes it too easy to lose semantic intent. A probability of `0.5` is not just any number; it is a probability. A matrix entry is not just a scalar; it is part of a structured numeric context. Domain objects preserve these invariants while still supporting explicit construction from common scalar inputs.
 
 By wrapping concept-specific values, Gauss preserves both mathematical meaning and validation.
 

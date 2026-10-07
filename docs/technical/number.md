@@ -6,17 +6,19 @@ The `Number` class is the central numeric base in Gauss. It is designed to make 
 
 ## Representation
 
-`Number` stores values as normalized decimal strings and relies on BCMath-based helpers for arithmetic and comparisons. This allows the library to avoid silently depending on native floating-point rounding for every operation.
+`Number` stores values as normalized decimal strings and relies on BCMath-based helpers for arithmetic and comparisons. Scientific-notation strings are expanded to decimal notation, and equivalent zero forms normalize to `"0"`. This avoids silently relying on native floating-point arithmetic for every operation.
+
+The PHP BCMath extension must be enabled at runtime. `Number::of()` accepts integers, floats, strings, and existing `Number` instances. Floats are converted using their round-trip decimal representation; any floating-point error already present in the value is preserved, so use strings when the decimal literal itself must be represented exactly. Non-finite floats such as `INF` and `NAN` are rejected.
 
 ## Precision model
 
 The implementation distinguishes between:
 
-- exact arithmetic on decimal values represented as strings,
-- controlled rounding when necessary,
+- exact addition, subtraction, multiplication, and comparison on represented decimal values,
+- rounded division and square-root/exponential results,
 - and approximation in numerical algorithms that are inherently iterative.
 
-This is important because Gauss is not a claim of universal exactness for every method, especially in numerical approximation routines.
+`mod()` accepts integer-like operands and uses Euclidean remainders. Negative powers use division, so their results follow the division rounding behavior.
 
 ## Immutable behavior
 
@@ -44,11 +46,13 @@ The core arithmetic methods include:
 - `exp()`
 - `round()`
 
-The code uses decimal normalization and controlled scale handling to maintain stable calculations over many operations.
+Addition, subtraction, and multiplication preserve all represented decimal digits. Division chooses a scale based on the operands' decimal places and relative magnitudes, then rounds half-up; it is not exact for every quotient. `sqrt()` and `exp()` round to at most 50 fractional decimal places. `round()` also uses half-up rounding, away from zero at ties.
+
+`pow()` accepts integer exponents from `-10000` through `10000`; `exp()` accepts arguments in `[-10000, 10000]`. Decimal scale used by BCMath-backed operations is guarded at 100,000 places; this is an internal calculation-scale limit, not a limit on numeric magnitude. Scientific-notation input exponents are limited to `[-10000, 10000]`.
 
 ## Comparison
 
-`compare()` is the canonical ordering operation. It compares two `Number` instances without relying on ambiguous float semantics.
+`compare()` is the canonical ordering operation. It compares a `Number` with another `Number` or supported scalar input without relying on ambiguous native-float comparison.
 
 ## Conversion and validation
 
@@ -56,7 +60,7 @@ The `Number::of()` factory accepts integers, floats, strings, or existing `Numbe
 
 ## Precision boundaries and limitations
 
-A key design decision is honesty: Gauss does not claim that every operation is mathematically exact in all contexts. Decimal arithmetic is exact for the represented values, but functions like `sqrt()` and `exp()` are still subject to the implementation’s rounding model. Numerical methods may also be approximative by nature.
+A key design decision is honesty: Gauss does not claim that every operation is mathematically exact in all contexts. Addition, subtraction, multiplication, and comparison are exact for represented decimal values; division, `sqrt()`, and `exp()` follow the implementation's rounding model. Numerical methods may also be approximate by nature.
 
 This is a deliberate design philosophy: Gauss represents the numeric pipeline truthfully rather than overstating guarantee levels.
 

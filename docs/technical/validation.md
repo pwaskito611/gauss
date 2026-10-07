@@ -9,7 +9,7 @@ Validation is a central design concern in Gauss. The library makes correctness m
 Examples include:
 
 - probability values must be between `0` and `1`
-- Poisson rate must be positive
+- distribution parameters are checked against their domains (for example, Poisson and exponential rates and a normal standard deviation must be positive)
 - vector dimensions must match when operations require it
 - matrix dimensions must be consistent
 

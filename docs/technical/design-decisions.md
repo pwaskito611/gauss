@@ -22,4 +22,4 @@ The library roots itself in a compositional philosophy: if a user wants to build
 
 ## Why not oversell exactness?
 
-The implementation is honest about whether a function is exact, precise, or approximate. This avoids misleading users about numerical guarantees while preserving the practical usefulness of the library.
+The implementation distinguishes exact decimal operations from rounded operations and iterative approximations. In particular, `Number` preserves represented digits for addition, subtraction, multiplication, and comparison, while division, square roots, exponentials, and numerical algorithms can produce rounded or approximate results. This avoids misleading users about numerical guarantees while preserving the practical usefulness of the library.

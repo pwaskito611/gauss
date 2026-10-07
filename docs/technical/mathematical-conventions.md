@@ -20,12 +20,12 @@ Distribution classes accept numeric parameters like a Poisson rate, and they enf
 
 ## Zero and one representation
 
-The library normalizes values so that semantically equivalent zero forms are treated as zero, for example `0`, `0.0`, `0E-10`, and `-0` are considered zero-equivalent.
+`Number` normalizes equivalent decimal representations, so forms such as `0`, `0.0`, `0E-10`, and `-0` become `"0"`.
 
 ## Comparison semantics
 
-Comparison is done using `Number::compare()`, which operates on a controlled decimal representation rather than a naïve native float comparison.
+`Number::compare()` compares normalized decimal values rather than converting them to native floats. APIs that accept scalar numeric inputs first convert them through `Number`.
 
 ## Precision semantics
 
-Precision is defined by the library’s numeric representation and rounding strategy. Some numerical methods may still be approximate by design.
+Addition, subtraction, multiplication, and comparison preserve the represented decimal values. Division, square root, and exponential use controlled rounding, and iterative numerical methods may be approximate by design; see [Precision](./precision.md) for the current limits and rounding model.

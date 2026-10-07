@@ -2,24 +2,24 @@
 
 Gauss is organized by domain, but the most important real dependency is its numeric foundation.
 
-## Dependency overview
+## Direct internal dependencies
 
-```text
-Number
-  ├── Algebra
-  ├── Linear
-  ├── Probability
-  ├── Distribution
-  ├── Statistics
-  └── Numerical/Optimization
-```
+The table lists the modules each module directly imports from `src/`. Dependencies within the same module are omitted.
 
-## Actual implementation pattern
+| Module | Direct dependencies |
+| --- | --- |
+| `Number` | None |
+| `Algebra` | `Number` |
+| `Linear` | `Number`, `Algebra` |
+| `Geometry` | `Number`, `Linear` |
+| `Probability` | `Number` |
+| `Distribution` | `Number`, `Probability` |
+| `Statistics` | `Number`, `Linear` |
+| `Numerical` | `Number` |
+| `Optimization` | `Number`, `Linear` |
+| `TimeSeries` | `Number`, `Linear`, `Statistics` |
+| `Discrete` | `Number` |
 
-- `Number` is used throughout arithmetic-heavy modules.
-- `Probability` wraps a validated `Number` in `[0, 1]`.
-- `Distribution` classes depend on `Number` parameters and return `Probability` values.
-- `Vector` and `Matrix` operate over `Number` entries.
-- Higher-level modules like statistics and optimization consume numbers, vectors, and matrices generated from those lower layers.
+## Dependency interpretation
 
-This is a dependency pattern based on actual code structure and not just an idealized conceptual architecture.
+`Number` is the common numeric foundation, but the modules do not form one linear stack. For example, `Geometry` uses vectors from `Linear`, and `TimeSeries` uses both `Statistics` and `Linear`. These are direct source-level imports; they do not describe runtime call order or every conceptual relationship.
