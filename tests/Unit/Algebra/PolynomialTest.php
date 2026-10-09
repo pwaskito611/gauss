@@ -180,6 +180,25 @@ final class PolynomialTest extends TestCase
         self::assertSame('3.000000000000000000000000000000000000000000000000000000000001', $result->value());
     }
 
+    public function testOffPrecisionUsesFloatArithmeticAcrossPolynomialOperations(): void
+    {
+        $polynomial = Polynomial::of([
+            0 => Number::of(1),
+            1 => Number::of(2),
+            2 => Number::of(3),
+        ]);
+        $floatPolynomial = $polynomial->offPrecision();
+
+        self::assertSame('bcmath', $polynomial->evaluate(Number::of(2))->backend());
+        self::assertSame('float', $floatPolynomial->evaluate(Number::of(2))->backend());
+        self::assertSame('float', $floatPolynomial->derivative()->evaluate(Number::of(2))->backend());
+        self::assertSame(
+            'float',
+            $floatPolynomial->integral(Number::of(0)->offPrecision())->coefficient(1)->backend()
+        );
+        self::assertSame('17', $floatPolynomial->evaluate(Number::of(2))->value());
+    }
+
     public function testOperationsDoNotMutateTheOriginal(): void
     {
         $polynomial = Polynomial::of([0 => Number::of(1), 1 => Number::of(2)]);

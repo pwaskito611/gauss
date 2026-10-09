@@ -70,10 +70,32 @@ $product = $x->mul($y);  // 26.25
 $quotient = $x->div($y); // 4.2
 ```
 
-`add()`, `sub()`, and `mul()` perform exact decimal arithmetic on the stored
-decimal values. The methods accept an integer, float, numeric string, or
-`Number` as their operand. As with construction, a float operand may reflect
-precision loss that occurred before the call.
+### Native-float mode
+
+BCMath is the default backend. To explicitly use native PHP floats, call
+`offPrecision()` to get a float-mode copy. The original `Number` is unchanged,
+and arithmetic results retain float mode:
+
+```php
+$decimal = Number::of('0.1');
+$float = $decimal->offPrecision();
+$sum = $float->add('0.2');
+
+$decimal->backend(); // "bcmath"
+$float->backend();   // "float"
+$sum->backend();     // "float"
+```
+
+`backend()` is marked `@internal`; use it for diagnostics and tests, not as an
+application-level branching contract. Float arithmetic has finite binary
+precision; see
+[Precision modes](precision.md) for propagation, available APIs, and limitations.
+
+In default BCMath mode, `add()`, `sub()`, and `mul()` perform exact decimal
+arithmetic on the stored decimal values. The methods accept an integer, float,
+numeric string, or `Number` as their operand. As with construction, a float
+operand may reflect precision loss that occurred before the call. In float
+mode, these operations use native PHP floats.
 
 ### Division
 
@@ -245,7 +267,7 @@ scale.
 | `exp()` | Deterministic half-up rounded result at 50 decimal places |
 | `round()` | Half-up rounding to the requested scale |
 
-Exact arithmetic refers to the stored decimal values. It does not undo
+Exact BCMath arithmetic refers to the stored decimal values. It does not undo
 precision loss from a float before it was converted to `Number`. Division has
 a dynamic working scale with a 60-place base; very small results may therefore
 contain many leading fractional zeroes while retaining significant digits.

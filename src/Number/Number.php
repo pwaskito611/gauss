@@ -29,6 +29,7 @@ final class Number
 
     private function __construct(
         private readonly string $value,
+        private readonly bool $floatBackend = false,
     ) {
     }
 
@@ -49,13 +50,13 @@ final class Number
         }
 
         if (is_int($value)) {
-            return new self((string) $value);
+            return new self((string) $value, false);
         }
 
         if (is_float($value)) {
             // Catatan: error floating-point yang sudah ada di $value
             // tidak bisa dikoreksi. Gunakan string untuk nilai eksak.
-            return new self(Decimal::fromFloat($value));
+            return new self(Decimal::fromFloat($value), false);
         }
 
         $value = trim($value);
@@ -66,20 +67,61 @@ final class Number
             );
         }
 
-        return new self(Decimal::normalize($value));
+        return new self(Decimal::normalize($value), false);
+    }
+
+    /** @internal Backend introspection for Gauss integrations and tests. */
+    public function backend(): string
+    {
+        return $this->floatBackend ? 'float' : 'bcmath';
+    }
+
+    /** @internal Used to propagate the selected arithmetic backend. */
+    public function usesFloatBackend(): bool
+    {
+        return $this->floatBackend;
+    }
+
+    public function offPrecision(): self
+    {
+        $number = new self($this->value, true);
+        self::toFloat($number);
+
+        return $number;
     }
 
     public function one(): self
     {
-        return self::of(1);
+        return self::of(1)->withBackend($this->floatBackend);
+    }
+
+    /** @internal Rebinds a numeric value at a Gauss-owned scope boundary. */
+    public function withBackend(bool $floatBackend): self
+    {
+        if ($floatBackend) {
+            self::toFloat($this);
+        }
+
+        return new self($this->value, $floatBackend);
     }
 
     public function add(int|float|string|self $other): self
     {
         $other = self::of($other);
 
+        if ($this->floatBackend || $other->floatBackend) {
+            $left = self::toFloat($this);
+            $right = self::toFloat($other);
+
+            return new self(
+                Decimal::fromFloat($left + $right),
+                true
+            );
+        }
+
         return new self(
-            Decimal::add($this->value, $other->value)
+            Decimal::add($this->value, $other->value),
+            false
         );
     }
 
@@ -87,8 +129,19 @@ final class Number
     {
         $other = self::of($other);
 
+        if ($this->floatBackend || $other->floatBackend) {
+            $left = self::toFloat($this);
+            $right = self::toFloat($other);
+
+            return new self(
+                Decimal::fromFloat($left - $right),
+                true
+            );
+        }
+
         return new self(
-            Decimal::sub($this->value, $other->value)
+            Decimal::sub($this->value, $other->value),
+            false
         );
     }
 
@@ -96,14 +149,48 @@ final class Number
     {
         $other = self::of($other);
 
+        if ($this->floatBackend || $other->floatBackend) {
+            $left = self::toFloat($this);
+            $right = self::toFloat($other);
+            $result = $left * $right;
+            if ($result === 0.0 && $left !== 0.0 && $right !== 0.0) {
+                throw new InvalidArgumentException('Multiplication underflows the native float range.');
+            }
+
+            return new self(
+                Decimal::fromFloat($result),
+                true
+            );
+        }
+
         return new self(
-            Decimal::mul($this->value, $other->value)
+            Decimal::mul($this->value, $other->value),
+            false
         );
     }
 
     public function div(int|float|string|self $other): self
     {
         $other = self::of($other);
+
+        if ($this->floatBackend || $other->floatBackend) {
+            $dividend = self::toFloat($this);
+            $divisor = self::toFloat($other);
+            if ($divisor === 0.0) {
+                throw new DivisionByZeroError(
+                    'Division by zero is undefined.'
+                );
+            }
+            $result = $dividend / $divisor;
+            if ($result === 0.0 && $dividend !== 0.0) {
+                throw new InvalidArgumentException('Division underflows the native float range.');
+            }
+
+            return new self(
+                Decimal::fromFloat($result),
+                true
+            );
+        }
 
         // Zero-check exact (bukan bccomp dengan scale tetap yang bisa
         // salah menganggap 1e-100 sebagai nol).
@@ -135,7 +222,8 @@ final class Number
         return new self(
             Decimal::normalize(
                 Decimal::div($this->value, $other->value, $scale)
-            )
+            ),
+            false
         );
     }
 
@@ -143,6 +231,27 @@ final class Number
     public function mod(int|float|string|self $other): self
     {
         $other = self::of($other);
+
+        if ($this->floatBackend || $other->floatBackend) {
+            $dividend = self::toFloat($this);
+            $divisor = self::toFloat($other);
+            $this->integerString();
+            $other->integerString();
+
+            if ($divisor === 0.0) {
+                throw new DivisionByZeroError('Division by zero is undefined.');
+            }
+
+            $remainder = fmod($dividend, $divisor);
+            if ($remainder < 0.0) {
+                $remainder += abs($divisor);
+            }
+
+            return new self(
+                Decimal::fromFloat($remainder),
+                true
+            );
+        }
 
         $a = $this->integerString();
         $b = $other->integerString();
@@ -163,12 +272,16 @@ final class Number
             );
         }
 
-        return new self(Decimal::normalize($remainder));
+        return new self(Decimal::normalize($remainder), false);
     }
 
     public function compare(int|float|string|self $other): int
     {
         $other = self::of($other);
+
+        if ($this->floatBackend || $other->floatBackend) {
+            return self::toFloat($this) <=> self::toFloat($other);
+        }
 
         // Exact: tidak dibulatkan ke SCALE, sehingga selisih seperti
         // 1e-60 vs 0 tetap terdeteksi.
@@ -178,7 +291,7 @@ final class Number
     public function abs(): self
     {
         if (str_starts_with($this->value, '-')) {
-            return new self(substr($this->value, 1));
+            return new self(substr($this->value, 1), $this->floatBackend);
         }
 
         return $this;
@@ -186,7 +299,23 @@ final class Number
 
     public function round(int $scale): self
     {
-        return new self(Decimal::normalize(Decimal::round($this->value, $scale)));
+        if ($this->floatBackend) {
+            if ($scale < 0) {
+                throw new InvalidArgumentException('Scale must be non-negative.');
+            }
+            if ($scale > Decimal::MAX_INTERNAL_SCALE) {
+                throw new InvalidArgumentException(
+                    'Scale exceeds the maximum supported internal scale.'
+                );
+            }
+
+            return new self(
+                Decimal::fromFloat(round(self::toFloat($this), $scale)),
+                true
+            );
+        }
+
+        return new self(Decimal::normalize(Decimal::round($this->value, $scale)), false);
     }
 
     public function pow(int $exponent): self
@@ -197,6 +326,22 @@ final class Number
         ) {
             throw new InvalidArgumentException(
                 'Exponent must be within +/-' . self::MAX_EXPONENT . '.'
+            );
+        }
+
+        if ($this->floatBackend) {
+            $base = self::toFloat($this);
+            if ($base === 0.0 && $exponent < 0) {
+                throw new DivisionByZeroError('Division by zero is undefined.');
+            }
+            $result = $base ** $exponent;
+            if ($result === 0.0 && $base !== 0.0) {
+                throw new InvalidArgumentException('Exponentiation underflows the native float range.');
+            }
+
+            return new self(
+                Decimal::fromFloat($result),
+                true
             );
         }
 
@@ -243,13 +388,20 @@ final class Number
 
     public function sqrt(): self
     {
-        $x = $this->value;
-
-        if (str_starts_with($x, '-')) {
+        if (str_starts_with($this->value, '-')) {
             throw new LogicException(
                 'Square root requires a non-negative real number.'
             );
         }
+
+        if ($this->floatBackend) {
+            return new self(
+                Decimal::fromFloat(sqrt(self::toFloat($this))),
+                true
+            );
+        }
+
+        $x = $this->value;
 
         if (self::isZeroExactString($x) || $x === '1') {
             return $this;
@@ -264,37 +416,44 @@ final class Number
                     bcsqrt($x, self::SCALE + 1),
                     self::SCALE
                 )
-            )
+            ),
+            false
         );
     }
 
     public function exp(): self
     {
         $x = $this->value;
+        $negative = str_starts_with($x, '-');
+        $absolute = $negative ? substr($x, 1) : $x;
+
+        if (
+            Decimal::compare($absolute, (string) self::MAX_EXP_ARGUMENT) > 0
+        ) {
+            throw new InvalidArgumentException(
+                'exp() argument must be within +/-' . self::MAX_EXP_ARGUMENT . '.'
+            );
+        }
+
+        if ($this->floatBackend) {
+            $result = exp(self::toFloat($this));
+            if ($result === 0.0) {
+                throw new InvalidArgumentException('Exponential underflows the native float range.');
+            }
+
+            return new self(
+                Decimal::fromFloat($result),
+                true
+            );
+        }
 
         if (self::isZeroExactString($x)) {
             return self::of(1);
         }
 
-        $negative = str_starts_with($x, '-');
-        $absolute = $negative ? substr($x, 1) : $x;
-
         // Exact boundary check: Decimal::compare menormalisasi kedua
         // operand dan membandingkan secara exact, tanpa truncation
         // pada scale tetap 60.
-        if (
-            Decimal::compare(
-                $absolute,
-                (string) self::MAX_EXP_ARGUMENT
-            ) > 0
-        ) {
-            throw new InvalidArgumentException(
-                'exp() argument must be within +/-'
-                . self::MAX_EXP_ARGUMENT
-                . '.'
-            );
-        }
-
         if (
             $negative
             && Decimal::compare(
@@ -361,7 +520,7 @@ final class Number
             $roundedUpper = Decimal::round($upper, self::SCALE);
 
             if ($roundedLower === $roundedUpper) {
-                return new self(Decimal::normalize($roundedLower));
+                return new self(Decimal::normalize($roundedLower), false);
             }
 
             if ($work > Decimal::MAX_INTERNAL_SCALE - 16) {
@@ -542,6 +701,21 @@ final class Number
         }
 
         return $this->value;
+    }
+
+    private static function toFloat(self $number): float
+    {
+        $value = (float) $number->value;
+
+        if (! is_finite($value)) {
+            throw new InvalidArgumentException('Value is outside the native float range.');
+        }
+
+        if ($value === 0.0 && ! self::isZeroExactString($number->value)) {
+            throw new InvalidArgumentException('Value underflows the native float range.');
+        }
+
+        return $value;
     }
 
     private static function isZeroExactString(string $value): bool

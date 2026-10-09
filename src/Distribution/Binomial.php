@@ -25,9 +25,18 @@ final class Binomial implements DiscreteDistribution
         }
     }
 
-    public static function of(int $trials, int|float|string|Number $probability): self
+    public static function of(
+        int $trials,
+        int|float|string|Number $probability,
+        bool $precision = true,
+    ): self
     {
-        return new self($trials, Number::of($probability));
+        return new self($trials, Number::of($probability)->withBackend(! $precision));
+    }
+
+    public function offPrecision(): self
+    {
+        return new self($this->trials, $this->probability->offPrecision());
     }
 
     public function pmf(int|float|string|Number $x): Probability

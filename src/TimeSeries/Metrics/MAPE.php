@@ -18,7 +18,7 @@ final class MAPE
      * @param list<int|float|string|Number> $actual
      * @param list<int|float|string|Number> $predicted
      */
-    public static function calculate(array $actual, array $predicted): Number
+    public static function calculate(array $actual, array $predicted, bool $precision = true): Number
     {
         if ($actual === [] || $predicted === []) {
             throw new InvalidArgumentException('Actual and predicted series must not be empty.');
@@ -30,11 +30,11 @@ final class MAPE
 
         $sum = Number::of(0);
         foreach ($actual as $index => $value) {
-            $actualValue = Number::of($value);
+            $actualValue = Number::of($value)->withBackend(! $precision);
+            $predictedValue = Number::of($predicted[$index])->withBackend(! $precision);
             if ($actualValue->compare(Number::of(0)) === 0) {
                 throw new InvalidArgumentException('MAPE is undefined when actual values are zero.');
             }
-            $predictedValue = Number::of($predicted[$index]);
             $difference = $actualValue->sub($predictedValue)->abs()->div($actualValue->abs());
             $sum = $sum->add($difference);
         }

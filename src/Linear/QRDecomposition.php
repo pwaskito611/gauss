@@ -12,6 +12,7 @@ final class QRDecomposition
     private function __construct(
         private readonly Matrix $q,
         private readonly Matrix $r,
+        private readonly Matrix $source,
     ) {
     }
 
@@ -60,11 +61,16 @@ final class QRDecomposition
             $rRows[] = $values;
         }
 
-        return new self(Matrix::of($qRows), Matrix::of($rRows));
+        return new self(Matrix::of($qRows), Matrix::of($rRows), $matrix);
     }
 
     public function Q(): Matrix { return $this->q; }
     public function R(): Matrix { return $this->r; }
+
+    public function offPrecision(): self
+    {
+        return self::of($this->source->offPrecision());
+    }
 
     /**
      * Solves square systems and tall systems in the least-squares sense.

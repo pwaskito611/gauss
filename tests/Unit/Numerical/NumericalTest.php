@@ -40,6 +40,44 @@ final class NumericalTest extends TestCase
         );
     }
 
+    public function testPrecisionFlagReachesNumericalCallbacksAndResults(): void
+    {
+        $callbackBackends = [];
+        $root = Bisection::solve(
+            static function (Number $x) use (&$callbackBackends): Number {
+                $callbackBackends[] = $x->backend();
+                return $x->sub(1);
+            },
+            0,
+            2,
+            '0.000001',
+            100,
+            false,
+        );
+
+        self::assertNotEmpty($callbackBackends);
+        self::assertSame(['float'], array_values(array_unique($callbackBackends)));
+        self::assertSame('float', $root->backend());
+    }
+
+    public function testDefaultPrecisionBindsCallbackValuesToBcmath(): void
+    {
+        $callbackBackends = [];
+        Bisection::solve(
+            static function (Number $x) use (&$callbackBackends): Number {
+                $callbackBackends[] = $x->backend();
+                return $x->sub(1);
+            },
+            Number::of(0)->offPrecision(),
+            Number::of(2)->offPrecision(),
+            '0.000001',
+            100,
+        );
+
+        self::assertNotEmpty($callbackBackends);
+        self::assertSame(['bcmath'], array_values(array_unique($callbackBackends)));
+    }
+
     public function testBisectionRejectsInvalidBracket(): void
     {
         $this->expectException(InvalidArgumentException::class);

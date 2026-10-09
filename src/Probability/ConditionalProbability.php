@@ -20,4 +20,9 @@ final class ConditionalProbability
     {
         return $this->result;
     }
+
+    public function offPrecision(): self
+    {
+        return new self($this->result->offPrecision());
+    }
 }

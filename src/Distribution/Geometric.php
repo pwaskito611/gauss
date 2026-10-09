@@ -20,9 +20,14 @@ final class Geometric implements DiscreteDistribution
         }
     }
 
-    public static function of(int|float|string|Number $probability): self
+    public static function of(int|float|string|Number $probability, bool $precision = true): self
     {
-        return new self(Number::of($probability));
+        return new self(Number::of($probability)->withBackend(! $precision));
+    }
+
+    public function offPrecision(): self
+    {
+        return new self($this->probability->offPrecision());
     }
 
     public function pmf(int|float|string|Number $x): Probability

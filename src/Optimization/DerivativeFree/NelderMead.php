@@ -27,8 +27,9 @@ final class NelderMead
         int|float|string|Number $tolerance = '0.000001',
         int $maxIterations = 500,
         ?BoxConstraint $bounds = null,
+        bool $precision = true,
     ): OptimizationResult {
-        return self::optimize($objective, $simplex, $tolerance, $maxIterations, false, $bounds);
+        return self::optimize($objective, $simplex, $tolerance, $maxIterations, false, $bounds, $precision);
     }
 
     /**
@@ -42,8 +43,9 @@ final class NelderMead
         int|float|string|Number $tolerance = '0.000001',
         int $maxIterations = 500,
         ?BoxConstraint $bounds = null,
+        bool $precision = true,
     ): OptimizationResult {
-        return self::optimize($objective, $simplex, $tolerance, $maxIterations, true, $bounds);
+        return self::optimize($objective, $simplex, $tolerance, $maxIterations, true, $bounds, $precision);
     }
 
     /**
@@ -57,6 +59,7 @@ final class NelderMead
         int $maxIterations,
         bool $maximize,
         ?BoxConstraint $bounds,
+        bool $precision,
     ): OptimizationResult {
         if ($simplex === []) {
             throw new InvalidArgumentException('Simplex must contain at least one point.');
@@ -110,7 +113,27 @@ final class NelderMead
             }
         }
 
-        $tol = Number::of($tolerance);
+        $simplex = array_map(
+            static fn (Vector $point): Vector => Vector::of(...array_map(
+                static fn (Number $value): Number => $value->withBackend(! $precision),
+                $point->values(),
+            )),
+            $simplex
+        );
+        if ($bounds !== null) {
+            $bounds = BoxConstraint::from(
+                Vector::of(...array_map(
+                    static fn (Number $value): Number => $value->withBackend(! $precision),
+                    $bounds->lower()->values(),
+                )),
+                Vector::of(...array_map(
+                    static fn (Number $value): Number => $value->withBackend(! $precision),
+                    $bounds->upper()->values(),
+                )),
+            );
+        }
+
+        $tol = Number::of($tolerance)->withBackend(! $precision);
         if ($tol->compare(0) <= 0) {
             throw new InvalidArgumentException('Tolerance must be positive.');
         }
@@ -225,6 +248,7 @@ final class NelderMead
         }
 
         $value = Number::of($objective($point));
+        $value = $value->withBackend($point->usesFloatBackend());
 
         return $maximize ? $value->mul(-1) : $value;
     }

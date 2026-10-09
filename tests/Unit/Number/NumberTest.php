@@ -36,6 +36,39 @@ final class NumberTest extends TestCase
         self::assertSame($number, Number::of($number));
     }
 
+    public function testOffPrecisionUsesFloatBackendAndPropagates(): void
+    {
+        $number = Number::of('0.1')->offPrecision();
+
+        self::assertSame('float', $number->backend());
+        self::assertSame('0.30000000000000004', $number->add('0.2')->value());
+        self::assertSame('0.5', $number->div(0.2)->value());
+        self::assertSame('bcmath', Number::of('0.1')->backend());
+        self::assertSame('bcmath', Number::of('0.1')->add('0.2')->backend());
+        self::assertSame('1', Number::of(10)->offPrecision()->mod(3)->value());
+        self::assertSame('2', Number::of(-10)->offPrecision()->mod(3)->value());
+    }
+
+    public function testOffPrecisionRejectsInvalidFloatRangeAndPreservesDomainErrors(): void
+    {
+        try {
+            Number::of('1e400')->offPrecision();
+            self::fail('Expected an out-of-range value to be rejected.');
+        } catch (InvalidArgumentException $exception) {
+            self::assertStringContainsString('float range', $exception->getMessage());
+        }
+
+        try {
+            Number::of('1e-400')->offPrecision();
+            self::fail('Expected an underflowing value to be rejected.');
+        } catch (InvalidArgumentException $exception) {
+            self::assertStringContainsString('underflows', $exception->getMessage());
+        }
+
+        $this->expectException(DivisionByZeroError::class);
+        Number::of(0)->offPrecision()->pow(-1);
+    }
+
     public function testOfRejectsInvalidString(): void
     {
         $this->expectException(InvalidArgumentException::class);

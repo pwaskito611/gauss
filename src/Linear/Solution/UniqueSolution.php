@@ -21,4 +21,9 @@ final class UniqueSolution implements LinearSystemSolution
     {
         return $this->vector;
     }
+
+    public function offPrecision(): self
+    {
+        return new self($this->vector->offPrecision());
+    }
 }

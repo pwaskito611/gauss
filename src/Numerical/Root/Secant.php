@@ -23,10 +23,11 @@ final class Secant
         int|float|string|Number $secondGuess,
         int|float|string|Number $tolerance = '0.000001',
         int $maxIterations = 100,
+        bool $precision = true,
     ): Number {
-        $x0 = Number::of($firstGuess);
-        $x1 = Number::of($secondGuess);
-        $tol = Number::of($tolerance);
+        $x0 = Number::of($firstGuess)->withBackend(! $precision);
+        $x1 = Number::of($secondGuess)->withBackend(! $precision);
+        $tol = Number::of($tolerance)->withBackend(! $precision);
 
         if ($x0->compare($x1) === 0) {
             throw new InvalidArgumentException('Secant method requires distinct initial guesses.');
@@ -40,9 +41,14 @@ final class Secant
             throw new InvalidArgumentException('Maximum iterations must be positive.');
         }
 
+        $evaluate = static function (Number $point) use ($function): Number {
+            $value = Number::of($function($point));
+            return $value->withBackend($point->usesFloatBackend());
+        };
+
         for ($iteration = 0; $iteration < $maxIterations; $iteration++) {
-            $f0 = $function($x0);
-            $f1 = $function($x1);
+            $f0 = $evaluate($x0);
+            $f1 = $evaluate($x1);
 
             if ($f0->compare(0) === 0) {
                 return $x0;
@@ -69,7 +75,7 @@ final class Secant
             $x1 = $next;
 
             if ($iteration === $maxIterations - 1) {
-                $fFinal = $function($x1);
+                $fFinal = $evaluate($x1);
 
                 if ($fFinal->compare(0) === 0) {
                     return $x1;

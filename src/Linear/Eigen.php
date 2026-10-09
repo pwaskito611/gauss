@@ -37,6 +37,14 @@ final class Eigen
         return new self($values, $vectors);
     }
 
+    public function offPrecision(): self
+    {
+        return new self(
+            $this->eigenvalues->offPrecision(),
+            array_map(static fn (Vector $vector): Vector => $vector->offPrecision(), $this->eigenvectors),
+        );
+    }
+
     public function values(): Vector { return $this->eigenvalues; }
     public function eigenvalues(): Vector { return $this->eigenvalues; }
 

@@ -7,14 +7,20 @@ decompositions, linear maps, and vector spaces. Values are represented with
 `Gauss\Number\Number`; linear algebra operations delegate numerical arithmetic
 to `Number`.
 
-Addition, subtraction, and multiplication use `Number`'s exact decimal
-arithmetic on stored values. Operations that divide or take square roots,
-including determinant, inverse, norm, normalization, and QR solving, follow
-`Number`'s rounded precision behavior. Linear algebra results should therefore
-not be described as universally exact.
+In default BCMath mode, addition, subtraction, and multiplication use
+`Number`'s exact decimal arithmetic on stored values. Operations that divide
+or take square roots, including determinant, inverse, norm, normalization, and
+QR solving, follow `Number`'s rounded precision behavior. Linear algebra
+results should therefore not be described as universally exact. Float mode
+uses native PHP floats for the managed calculations.
 
 The types are immutable: operations produce results without changing their
 input objects.
+
+`Vector` and `Matrix` can be copied into float mode with `offPrecision()`.
+Their numeric operations then propagate that mode through Gauss linear
+algebra. BCMath remains the default. See
+[Precision modes](precision.md) for examples and numeric trade-offs.
 
 ## Vector
 
@@ -530,8 +536,10 @@ and row additions as needed.
 
 ## Precision model
 
-Linear types store entries as `Number` and delegate calculations to that
-type. `Number::add()`, `sub()`, and `mul()` are exact decimal operations on
+The following describes the default BCMath mode. Linear types store entries as
+`Number` and delegate calculations to that type. Calling `offPrecision()` on a
+vector, matrix, or supported linear object selects float arithmetic for
+subsequent operations. In default mode, `Number::add()`, `sub()`, and `mul()` are exact decimal operations on
 the stored values. `div()` uses rounded decimal division with a
 magnitude-aware working scale; `sqrt()` uses half-up rounding to 50 decimal
 places. Consequently:

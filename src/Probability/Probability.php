@@ -34,6 +34,11 @@ final class Probability
         return $this->value;
     }
 
+    public function offPrecision(): self
+    {
+        return new self($this->value->offPrecision());
+    }
+
     public function compare(int|float|string|Number|self $other): int
     {
         return $this->value->compare(

@@ -24,6 +24,11 @@ final class ArithmeticSequence
         return $this->first;
     }
 
+    public function offPrecision(): self
+    {
+        return new self($this->first->offPrecision(), $this->difference->offPrecision());
+    }
+
     public function at(Number $n): Number
     {
         if ($n->compare(Number::of(1)) < 0) {

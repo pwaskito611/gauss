@@ -8,10 +8,27 @@ observations as either a PHP array or a `Gauss\Linear\Vector`; methods
 operating on multiple datasets require matching observation counts.
 `covarianceMatrix()` and `correlationMatrix()` take a `Gauss\Linear\Matrix`.
 
-Values are converted through `Gauss\Number\Number`. Some calculations use
-exact decimal addition, subtraction, multiplication, comparison, and integer
-powers. Calculations that divide or take square roots inherit `Number`'s
-rounded decimal precision; not every statistical result is exact.
+Values are converted through `Gauss\Number\Number`. In default BCMath mode,
+some calculations use exact decimal addition, subtraction, multiplication,
+comparison, and integer powers. Calculations that divide or take square roots
+inherit `Number`'s rounded decimal precision; not every statistical result is
+exact. With `precision: false`, supported calculations use native floats
+instead.
+
+Numeric methods accept a trailing `bool $precision = true` selector. The default
+`true` keeps BCMath; pass `false` to run the supported calculation with native
+floats:
+
+```php
+$decimalMean = Statistics::mean([1, 2, 3]);
+$floatMean = Statistics::mean([1, 2, 3], precision: false);
+
+$decimalMean->backend(); // "bcmath"
+$floatMean->backend();   // "float"
+```
+
+`count()` remains integer-valued. The complete method coverage and float-mode
+caveats are in [Precision modes](precision.md).
 
 ## Input model
 
@@ -418,6 +435,9 @@ Statistics uses `Number` for numeric conversion, arithmetic, and comparison.
 The exactness and rounding behavior therefore depend on the operations a
 statistic uses; inputs supplied as floats may already have lost decimal
 precision before conversion.
+The table below describes the default `precision: true` BCMath path. Methods
+called with `precision: false` perform supported arithmetic using native floats
+instead; see [Precision modes](precision.md).
 
 | Statistic / operation | Precision behavior |
 | --- | --- |

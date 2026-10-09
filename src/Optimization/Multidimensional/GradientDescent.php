@@ -34,6 +34,7 @@ final class GradientDescent
         int|float|string|Number|null $lineSearchLowerBound = 0,
         int|float|string|Number|null $lineSearchUpperBound = null,
         ?BoxConstraint $bounds = null,
+        bool $precision = true,
     ): OptimizationResult {
         return self::optimize(
             $objective,
@@ -46,6 +47,7 @@ final class GradientDescent
             $lineSearchLowerBound,
             $lineSearchUpperBound,
             $bounds,
+            $precision,
         );
     }
 
@@ -66,6 +68,7 @@ final class GradientDescent
         int|float|string|Number|null $lineSearchLowerBound = 0,
         int|float|string|Number|null $lineSearchUpperBound = null,
         ?BoxConstraint $bounds = null,
+        bool $precision = true,
     ): OptimizationResult {
         return self::optimize(
             $objective,
@@ -78,6 +81,7 @@ final class GradientDescent
             $lineSearchLowerBound,
             $lineSearchUpperBound,
             $bounds,
+            $precision,
         );
     }
 
@@ -95,12 +99,29 @@ final class GradientDescent
         int|float|string|Number|null $lineSearchLowerBound,
         int|float|string|Number|null $lineSearchUpperBound,
         ?BoxConstraint $bounds,
+        bool $precision,
     ): OptimizationResult {
-        $rate = Number::of($learningRate);
-        $tol = Number::of($tolerance);
-        $step = Number::of($gradientStep);
-        $lineLower = Number::of($lineSearchLowerBound ?? 0);
-        $lineUpper = Number::of($lineSearchUpperBound ?? $rate->mul(10));
+        $rate = Number::of($learningRate)->withBackend(! $precision);
+        $tol = Number::of($tolerance)->withBackend(! $precision);
+        $step = Number::of($gradientStep)->withBackend(! $precision);
+        $lineLower = Number::of($lineSearchLowerBound ?? 0)->withBackend(! $precision);
+        $lineUpper = Number::of($lineSearchUpperBound ?? $rate->mul(10))->withBackend(! $precision);
+        $initial = Vector::of(...array_map(
+            static fn (Number $value): Number => $value->withBackend(! $precision),
+            $initial->values(),
+        ));
+        if ($bounds !== null) {
+            $bounds = BoxConstraint::from(
+                Vector::of(...array_map(
+                    static fn (Number $value): Number => $value->withBackend(! $precision),
+                    $bounds->lower()->values(),
+                )),
+                Vector::of(...array_map(
+                    static fn (Number $value): Number => $value->withBackend(! $precision),
+                    $bounds->upper()->values(),
+                )),
+            );
+        }
 
         if ($rate->compare(0) <= 0) {
             throw new InvalidArgumentException('Learning rate must be positive.');
@@ -172,6 +193,7 @@ final class GradientDescent
                 $feasibleUpper,
                 $tol,
                 400,
+                $precision,
             );
 
             $next = $current->add($stepDirection->scale($lineResult->point()));
@@ -292,6 +314,9 @@ final class GradientDescent
      */
     private static function evaluateObjective(callable $objective, Vector $point): Number
     {
-        return Number::of($objective($point));
+        $value = Number::of($objective($point));
+        $value = $value->withBackend($point->usesFloatBackend());
+
+        return $value;
     }
 }

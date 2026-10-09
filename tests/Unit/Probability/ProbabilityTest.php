@@ -114,6 +114,32 @@ final class ProbabilityTest extends TestCase
         self::assertSame('1.25', Variance::of($x, $measure)->value()->value());
     }
 
+    public function testOffPrecisionPropagatesThroughProbabilityMeasureAndExpectation(): void
+    {
+        $space = SampleSpace::of('A', 'B', 'C');
+        $measure = ProbabilityMeasure::uniform($space)->offPrecision();
+        $variable = RandomVariable::of($space, [1, 2, 3])->offPrecision();
+        $expectation = Expectation::of($variable, $measure)->offPrecision()->value();
+
+        self::assertSame('float', $measure->probabilityFor('A')->value()->backend());
+        self::assertSame('float', $variable->valueFor('B')->backend());
+        self::assertSame('float', $expectation->backend());
+        self::assertLessThanOrEqual(0, $expectation->sub('2')->abs()->compare('0.000000000001'));
+    }
+
+    public function testExpectationAndVariancePrecisionArgumentsBindAllDependencies(): void
+    {
+        $space = SampleSpace::of('A', 'B');
+        $measure = ProbabilityMeasure::uniform($space)->offPrecision();
+        $variable = RandomVariable::of($space, [1, 3])->offPrecision();
+
+        self::assertSame('bcmath', Expectation::of($variable, $measure, true)->value()->backend());
+        self::assertSame('float', Expectation::of($variable, $measure, false)->value()->backend());
+        self::assertSame('float', Variance::of($variable, $measure, false)->value()->backend());
+        self::assertSame('float', RandomVariable::of($space, [1, 3], false)->valueFor('A')->backend());
+        self::assertSame('float', ProbabilityMeasure::uniform($space, false)->probabilityFor('A')->value()->backend());
+    }
+
     public function testConditionalProbabilityRejectsZeroDenominator(): void
     {
         $space = SampleSpace::of('A', 'B');

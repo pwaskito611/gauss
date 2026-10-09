@@ -78,6 +78,26 @@ final class Vector
         return $this->values[$index];
     }
 
+    public function offPrecision(): self
+    {
+        return new self(array_map(
+            static fn (Number $value): Number => $value->offPrecision(),
+            $this->values
+        ));
+    }
+
+    /** @internal Used to propagate a vector's arithmetic backend. */
+    public function usesFloatBackend(): bool
+    {
+        foreach ($this->values as $value) {
+            if ($value->usesFloatBackend()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /** @return list<Number> */
     public function values(): array
     {
@@ -233,8 +253,17 @@ final class Vector
 
     public function map(callable $transform): self
     {
+        $floatBackend = array_reduce(
+            $this->values,
+            static fn (bool $carry, Number $value): bool => $carry || $value->usesFloatBackend(),
+            false
+        );
+
         return new self(array_map(
-            static fn (Number $value): Number => Number::of($transform($value)),
+            static function (Number $value) use ($transform, $floatBackend): Number {
+                $mapped = Number::of($transform($value));
+                return $mapped->usesFloatBackend() ? $mapped : $mapped->withBackend($floatBackend);
+            },
             $this->values
         ));
     }

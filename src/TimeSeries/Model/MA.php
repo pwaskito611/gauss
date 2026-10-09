@@ -42,8 +42,13 @@ final class MA
         $this->coefficients = $coefficients;
     }
 
-    public static function fit(TimeSeries $series, int $order): self
+    public static function fit(TimeSeries $series, int $order, bool $precision = true): self
     {
+        $series = TimeSeries::of(array_map(
+            static fn (Number $value): Number => $value->withBackend(! $precision),
+            $series->values(),
+        ));
+
         if ($order < 1) {
             throw new InvalidArgumentException('MA order must be at least 1.');
         }
@@ -53,7 +58,7 @@ final class MA
         }
 
         $values = $series->values();
-        $mean = Statistics::mean($values);
+        $mean = Statistics::mean($values, $precision);
         $coefficients = array_fill(0, $order, Number::of(0));
         $residuals = [];
 
@@ -161,6 +166,16 @@ final class MA
     public function order(): int
     {
         return $this->order;
+    }
+
+    public function offPrecision(): self
+    {
+        return new self(
+            $this->order,
+            array_map(static fn (Number $value): Number => $value->offPrecision(), $this->coefficients),
+            $this->mean->offPrecision(),
+            $this->series->offPrecision(),
+        );
     }
 
     /** @return list<Number> */

@@ -68,6 +68,19 @@ final class MonomialTest extends TestCase
         self::assertSame('decimal', $term->coefficient()->type());
     }
 
+    public function testOffPrecisionUsesFloatArithmeticWithoutMutatingOriginal(): void
+    {
+        $term = new Monomial(Number::of(2), 3);
+        $floatTerm = $term->offPrecision();
+
+        self::assertSame('bcmath', $term->coefficient()->backend());
+        self::assertSame('float', $floatTerm->coefficient()->backend());
+        self::assertSame('float', $floatTerm->evaluate(Number::of(2))->backend());
+        self::assertSame('float', $floatTerm->derivative()->coefficient()->backend());
+        self::assertSame('float', $floatTerm->integral()->coefficient()->backend());
+        self::assertSame('16', $floatTerm->evaluate(Number::of(2))->value());
+    }
+
     public function testCalculusConvertsIntegerDegreesDirectly(): void
     {
         foreach ([0, 1, 2, 10, 100, 10000] as $degree) {

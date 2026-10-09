@@ -26,6 +26,12 @@ Operations involving division follow `Number::div()`'s half-up rounding
 behavior. Exact validation of a probability measure's total does not imply
 that every probability operation is exact.
 
+`ProbabilityMeasure` and `RandomVariable` factories, plus `Expectation::of()`
+and `Variance::of()`, accept a trailing `bool $precision = true`. The default
+selects BCMath; `false` selects float mode for the stored numeric weights and
+values and for the expectation/variance calculation. See
+[Precision modes](precision.md) for examples and limits.
+
 ## Probability
 
 `Probability` represents a value in the closed interval `[0, 1]`.
@@ -301,9 +307,10 @@ $independent = $measure->areIndependent($eventA, $eventB);
 ```
 
 Equality is evaluated by comparing the `Number` representations produced by
-the calculation. Multiplication and comparison use exact decimal arithmetic
-on those values; rounded division used to construct or derive probabilities
-can affect later exact equality checks.
+the calculation. In default BCMath mode, multiplication and comparison use
+exact decimal arithmetic on those values; rounded division used to construct
+or derive probabilities can affect later exact equality checks. Float mode
+instead follows native float behavior.
 
 ## Random variables
 
@@ -435,6 +442,10 @@ Identity rules include:
   into a stable order before identity is formed.
 
 ## Precision model
+
+The table describes the default BCMath mode. Probability values, measures,
+random variables, and expectation/variance computations can also use float
+mode via `offPrecision()` or the factory precision selector described above.
 
 | Operation | Arithmetic | Precision behavior |
 | --- | --- | --- |

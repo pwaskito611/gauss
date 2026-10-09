@@ -12,7 +12,16 @@ The module provides:
 - forecast-error metrics with `MAE`, `MAPE`, `MSE`, and `RMSE`;
 - autoregressive, moving-average, and joint models with `AR`, `MA`, and `ARMA`.
 
-Values are converted through `Gauss\Number\Number`. Calculations inherit `Number`'s decimal precision and rounding behavior. Methods that divide or take square roots are deterministic under those rules, but are not universally exact.
+Values are converted through `Gauss\Number\Number`. By default, calculations
+inherit `Number`'s BCMath decimal precision and rounding behavior. Methods that
+divide or take square roots are deterministic under those rules, but are not
+universally exact. The optional float mode uses native PHP float arithmetic.
+
+Numeric model-fitting, smoothing, differencing, and forecasting-metric entry
+points accept a trailing `bool $precision = true`. BCMath remains the default;
+pass `false` to select float mode for managed series values and calculations.
+Index-only `Lag` does not need a precision selector. See
+[Precision modes](precision.md).
 
 ## Core types
 
@@ -364,6 +373,9 @@ $residuals = $model->residuals();
 ## Precision model
 
 Time series calculations use `Number` for numeric conversion, arithmetic, and comparison. The exactness and rounding behavior therefore depend on the operations a routine uses. Inputs supplied as floats may already have lost decimal precision before conversion.
+The table below describes the default BCMath behavior. Numeric entry points
+called with `precision: false` use native floats for the calculations they
+manage; see [Precision modes](precision.md).
 
 | Routine / operation | Precision behavior |
 | --- | --- |

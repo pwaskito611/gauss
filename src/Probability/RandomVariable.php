@@ -17,7 +17,12 @@ final class RandomVariable
     private readonly SampleSpace $space;
 
     /** @param list<int|float|string|Number> $mapping */
-    private function __construct(SampleSpace $space, array $mapping, bool $explicitMap = false)
+    private function __construct(
+        SampleSpace $space,
+        array $mapping,
+        bool $explicitMap = false,
+        bool $floatBackend = false,
+    )
     {
         $normalized = [];
         $lookup = [];
@@ -28,7 +33,7 @@ final class RandomVariable
             }
 
             foreach ($outcomes as $index => $outcome) {
-                $value = Number::of($mapping[$index]);
+                $value = Number::of($mapping[$index])->withBackend($floatBackend);
                 $normalized[] = $value;
                 $lookup[OutcomeIdentity::key($outcome)] = $value;
             }
@@ -64,7 +69,7 @@ final class RandomVariable
                     throw new InvalidArgumentException('Random variable must define a numeric value for every sample outcome.');
                 }
 
-                $normalizedValue = Number::of($entriesByIdentity[$outcomeIdentity]);
+                $normalizedValue = Number::of($entriesByIdentity[$outcomeIdentity])->withBackend($floatBackend);
                 $normalized[] = $normalizedValue;
                 $lookup[$outcomeIdentity] = $normalizedValue;
             }
@@ -80,20 +85,39 @@ final class RandomVariable
     }
 
     /** @param list<int|float|string|Number> $mapping */
-    public static function of(SampleSpace $space, array $mapping): self
+    public static function of(SampleSpace $space, array $mapping, bool $precision = true): self
     {
-        return new self($space, $mapping);
+        return new self($space, $mapping, false, ! $precision);
     }
 
     /** @param array<mixed, int|float|string|Number|array{0:mixed,1:int|float|string|Number}> $mapping */
-    public static function fromMap(SampleSpace $space, array $mapping): self
+    public static function fromMap(SampleSpace $space, array $mapping, bool $precision = true): self
     {
-        return new self($space, $mapping, true);
+        return new self($space, $mapping, true, ! $precision);
     }
 
     public function sampleSpace(): SampleSpace
     {
         return $this->space;
+    }
+
+    public function offPrecision(): self
+    {
+        return $this->withBackend(true);
+    }
+
+    /** @internal Rebinds stored values at a Gauss-owned computation boundary. */
+    public function withBackend(bool $floatBackend): self
+    {
+        return new self(
+            $this->space,
+            array_map(
+                static fn (Number $value): Number => $value->withBackend($floatBackend),
+                $this->mapping,
+            ),
+            false,
+            $floatBackend,
+        );
     }
 
     /** @return list<Number> */

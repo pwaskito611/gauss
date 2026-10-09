@@ -40,6 +40,19 @@ final class StatisticsTest extends TestCase
         self::assertSame('1', $result->value());
     }
 
+    public function testPrecisionFlagSelectsTheStatisticsArithmeticBackend(): void
+    {
+        $default = Statistics::populationVariance([1, 2, 3]);
+        $float = Statistics::populationVariance([1, 2, 3], false);
+
+        self::assertSame('bcmath', $default->backend());
+        self::assertSame('float', $float->backend());
+        self::assertSame(
+            'bcmath',
+            Statistics::sum([Number::of(1)->offPrecision()])->backend()
+        );
+    }
+
     public function testNumberCanonicalRepresentationMatchesNumericEquality(): void
     {
         $oneForms = ['1', '01', '+1', '1.0', '1.00', '1e0', '1.0e0'];

@@ -14,6 +14,12 @@ The module provides:
 
 Values are converted through `Gauss\Number\Number`. One-dimensional objectives receive a `Number`; multidimensional objectives receive a `Gauss\Linear\Vector`. Calculations inherit `Number`'s decimal precision and rounding behavior. Search routines that divide or take square roots are deterministic under those rules, but are not universally exact.
 
+Each search method accepts a trailing `bool $precision = true`. The default
+uses BCMath; `false` converts algorithm-owned starting points, bounds,
+tolerances, candidates, and objective results to float mode. Objective
+callbacks receive float-mode arguments in that mode, but independent arithmetic
+inside the callback remains caller-controlled. See [Precision modes](precision.md).
+
 ## Core types
 
 | Type | Purpose |
@@ -310,6 +316,8 @@ $bounds->contains(Vector::of(2, 0)); // false
 ## Precision model
 
 Optimization uses `Number` for numeric conversion, arithmetic, and comparison. The exactness and rounding behavior therefore depend on the operations a routine uses. Inputs supplied as floats may already have lost decimal precision before conversion.
+The table below describes the default BCMath behavior. Passing `precision:
+false` to a search method changes the managed calculations to native floats.
 
 | Routine / operation | Precision behavior |
 | --- | --- |

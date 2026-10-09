@@ -23,10 +23,11 @@ final class Bisection
         int|float|string|Number $upper,
         int|float|string|Number $tolerance = '0.000001',
         int $maxIterations = 1000,
+        bool $precision = true,
     ): Number {
-        $a = Number::of($lower);
-        $b = Number::of($upper);
-        $tol = Number::of($tolerance);
+        $a = Number::of($lower)->withBackend(! $precision);
+        $b = Number::of($upper)->withBackend(! $precision);
+        $tol = Number::of($tolerance)->withBackend(! $precision);
 
         if ($a->compare($b) >= 0) {
             throw new InvalidArgumentException('Bisection requires a lower bound smaller than the upper bound.');
@@ -40,8 +41,13 @@ final class Bisection
             throw new InvalidArgumentException('Maximum iterations must be positive.');
         }
 
-        $fa = $function($a);
-        $fb = $function($b);
+        $evaluate = static function (Number $point) use ($function): Number {
+            $value = Number::of($function($point));
+            return $value->withBackend($point->usesFloatBackend());
+        };
+
+        $fa = $evaluate($a);
+        $fb = $evaluate($b);
 
         if ($fa->compare(0) === 0) {
             return $a;
@@ -57,7 +63,7 @@ final class Bisection
 
         for ($iteration = 0; $iteration < $maxIterations; $iteration++) {
             $midpoint = $a->add($b)->div(2);
-            $fMidpoint = $function($midpoint);
+            $fMidpoint = $evaluate($midpoint);
 
             if ($fMidpoint->compare(0) === 0 || $b->sub($a)->abs()->compare($tol) <= 0) {
                 return $midpoint;

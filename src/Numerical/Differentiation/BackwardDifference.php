@@ -20,14 +20,20 @@ final class BackwardDifference
         callable $function,
         int|float|string|Number $x,
         int|float|string|Number $step,
+        bool $precision = true,
     ): Number {
-        $value = Number::of($x);
-        $h = Number::of($step);
+        $value = Number::of($x)->withBackend(! $precision);
+        $h = Number::of($step)->withBackend(! $precision);
 
         if ($h->compare(0) === 0) {
             throw new InvalidArgumentException('Step size must not be zero.');
         }
 
-        return $function($value)->sub($function($value->sub($h)))->div($h);
+        $evaluate = static function (Number $point) use ($function): Number {
+            $result = Number::of($function($point));
+            return $result->withBackend($point->usesFloatBackend());
+        };
+
+        return $evaluate($value)->sub($evaluate($value->sub($h)))->div($h);
     }
 }

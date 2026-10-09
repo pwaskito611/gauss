@@ -21,6 +21,23 @@ The core types currently implemented are:
 - `Gauss\Distribution\Poisson`
 - `Gauss\Distribution\Uniform`
 
+Each built-in distribution factory accepts a trailing `bool $precision = true`.
+The default creates a BCMath-backed distribution; `false` selects float mode
+for its numeric parameters:
+
+```php
+use Gauss\Distribution\Normal;
+
+$decimalNormal = Normal::of(0, 1);
+$floatNormal = Normal::of(0, 1, precision: false);
+
+$decimalNormal->pdf(1)->backend(); // "bcmath"
+$floatNormal->pdf(1)->backend();   // "float"
+```
+
+Distribution interfaces are unchanged. See [Precision modes](precision.md)
+for propagation behavior and float limitations.
+
 ## Core types
 
 ### Distribution

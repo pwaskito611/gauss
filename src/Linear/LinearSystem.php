@@ -51,6 +51,11 @@ final class LinearSystem
         return $this->rhs;
     }
 
+    public function offPrecision(): self
+    {
+        return new self($this->matrix->offPrecision(), $this->rhs->offPrecision());
+    }
+
     public function variables(): int
     {
         return $this->matrix->columns();

@@ -37,6 +37,8 @@ This is a conceptual map, not a strict dependency chain. In practice, Gauss modu
 ### 1. Precision first
 
 The numeric base is based on `Number`, which stores values in a string-backed decimal format and delegates arithmetic to carefully controlled decimal operations.
+BCMath is the default; supported computations can explicitly opt into native
+float mode. See [Precision modes](precision.md) for the API and its limitations.
 
 ### 2. Explicit mathematics
 
@@ -57,7 +59,7 @@ A single primitive, such as a probability value, can be used in a broader statis
 
 ## When to use which module
 
-- Use `Number` for exact decimal or integer arithmetic.
+- Use `Number` for default BCMath decimal arithmetic or integer arithmetic.
 - Use `Algebra` for symbolic polynomial operations.
 - Use `Linear` for vectors, matrices, and linear systems.
 - Use `Probability` for probability values and event logic.

@@ -21,14 +21,19 @@ final class MovingAverage
         }
     }
 
-    public static function smooth(TimeSeries $series, int $window): TimeSeries
+    public static function smooth(TimeSeries $series, int $window, bool $precision = true): TimeSeries
     {
+        $series = TimeSeries::of(array_map(
+            static fn (Number $value): Number => $value->withBackend(! $precision),
+            $series->values(),
+        ));
+
         return (new self($window))->apply($series);
     }
 
-    public static function of(TimeSeries $series, int $window): TimeSeries
+    public static function of(TimeSeries $series, int $window, bool $precision = true): TimeSeries
     {
-        return self::smooth($series, $window);
+        return self::smooth($series, $window, $precision);
     }
 
     public function apply(TimeSeries $series): TimeSeries

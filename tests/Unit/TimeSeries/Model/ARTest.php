@@ -24,6 +24,23 @@ final class ARTest extends TestCase
         self::assertNotEmpty($model->residuals()->observations());
     }
 
+    public function testOffPrecisionPropagatesFromModelThroughForecastAndResiduals(): void
+    {
+        $model = AR::fit(TimeSeries::of([1, 2, 3, 4, 5, 6]), 1)->offPrecision();
+
+        self::assertSame('float', $model->intercept()->backend());
+        self::assertSame('float', $model->predict(1)->last()->value()->backend());
+        self::assertSame('float', $model->residuals()->first()->value()->backend());
+    }
+
+    public function testFitPrecisionFlagSelectsModelBackend(): void
+    {
+        $series = TimeSeries::of([1, 2, 3, 4, 5, 6]);
+
+        self::assertSame('bcmath', AR::fit($series, 1)->intercept()->backend());
+        self::assertSame('float', AR::fit($series, 1, false)->intercept()->backend());
+    }
+
     public function testArDoesNotUsePlaceholderCoefficients(): void
     {
         $seriesA = TimeSeries::of([1, 2, 3, 4, 5, 6]);

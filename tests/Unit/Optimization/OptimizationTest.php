@@ -36,6 +36,86 @@ final class OptimizationTest extends TestCase
         );
     }
 
+    public function testFloatBoundsRebindConstantObjectiveResultsToFloatMode(): void
+    {
+        $result = GoldenSectionSearch::minimize(
+            static fn (Number $point): Number => Number::of(1),
+            Number::of(-2)->offPrecision(),
+            Number::of(2)->offPrecision(),
+            Number::of('0.0001')->offPrecision(),
+            100,
+            false,
+        );
+
+        self::assertSame('float', $result->point()->backend());
+        self::assertSame('float', $result->value()->backend());
+    }
+
+    public function testPrecisionFlagUsesFloatBackendThroughoutSearch(): void
+    {
+        $callbackBackends = [];
+        $result = GoldenSectionSearch::minimize(
+            static function (Number $point) use (&$callbackBackends): Number {
+                $callbackBackends[] = $point->backend();
+                return $point->pow(2);
+            },
+            -2,
+            2,
+            '0.0001',
+            100,
+            false,
+        );
+
+        self::assertNotEmpty($callbackBackends);
+        self::assertSame(['float'], array_values(array_unique($callbackBackends)));
+        self::assertSame('float', $result->point()->backend());
+        self::assertSame('float', $result->value()->backend());
+    }
+
+    public function testMultidimensionalOptimizersPropagateExplicitFloatPrecision(): void
+    {
+        $backends = [];
+        $objective = static function (Vector $point) use (&$backends): Number {
+            $backends[] = $point->get(0)->backend();
+            return $point->get(0)->pow(2);
+        };
+
+        $coordinate = CoordinateDescent::minimize(
+            $objective,
+            Vector::of(2),
+            '0.01',
+            2,
+            BoxConstraint::from(Vector::of(-3), Vector::of(3)),
+            false,
+        );
+        $simplex = NelderMead::minimize(
+            $objective,
+            [Vector::of(1), Vector::of(2)],
+            '0.01',
+            3,
+            null,
+            false,
+        );
+        $gradient = GradientDescent::minimize(
+            $objective,
+            Vector::of(2),
+            '0.1',
+            '0.01',
+            1,
+            '0.0001',
+            0,
+            1,
+            null,
+            false,
+        );
+
+        self::assertNotEmpty($backends);
+        self::assertSame(['float'], array_values(array_unique($backends)));
+        self::assertSame('float', $coordinate->point()->get(0)->backend());
+        self::assertSame('float', $simplex->point()->get(0)->backend());
+        self::assertSame('float', $gradient->point()->get(0)->backend());
+    }
+
     public function testGoldenSectionSearchRejectsInvalidInterval(): void
     {
         $this->expectException(InvalidArgumentException::class);

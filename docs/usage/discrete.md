@@ -139,6 +139,26 @@ $relation->range();                                   // [2, 3]
 
 ## Sequences
 
+Arithmetic, geometric, and recurrence sequences contain numeric values and can
+opt into float mode with `offPrecision()`. Sequence indices remain integer
+validated:
+
+```php
+use Gauss\Discrete\Sequence\ArithmeticSequence;
+use Gauss\Number\Number;
+
+$sequence = ArithmeticSequence::from(Number::of(2), Number::of(3));
+$term = $sequence->offPrecision()->at(Number::of(5));
+
+$term->value();   // "14"
+$term->backend(); // "float"
+```
+
+Combinatorics and number-theory routines retain exact integer semantics and are
+not switched to floats. Recurrence callbacks receive float-mode terms when the
+sequence is converted; arithmetic the callback starts independently is still
+the callback author's responsibility. See [Precision modes](precision.md).
+
 ### `ArithmeticSequence`
 
 Defined by a first term and a common difference.
@@ -450,16 +470,16 @@ $factorization->exponents();    // [3, 2, 1]
 
 ## Precision model
 
-Discrete calculations use `Number` for numeric conversion, arithmetic, comparison, and modular reduction. Integer-domain operations such as divisibility, gcd, modular arithmetic, and factorization are exact under `Number`'s comparison rules, because every intermediate value stays an exact integer.
+Discrete calculations use `Number` for numeric conversion, arithmetic, comparison, and modular reduction. Integer-domain operations such as divisibility, gcd, modular arithmetic, and factorization are exact under `Number`'s comparison rules, because every intermediate value stays an exact integer. Float mode is only relevant to the numeric sequence-value objects described above; it does not alter combinatorics, number theory, set operations, or index validation.
 
 Operations that divide, take square roots, or iterate over a heuristic range may inherit `Number`'s rounded decimal behavior:
 
 | Routine / operation | Precision behavior |
 | --- | --- |
 | `Set`, `Relation` | Exact `Number::compare()` for membership and equality; no arithmetic. |
-| `ArithmeticSequence` | Exact decimal addition and multiplication. |
-| `GeometricSequence` | Uses `Number::pow()` for the exponent. |
-| `Recurrence` | Uses the supplied rule; precision depends on the rule body. |
+| `ArithmeticSequence` | BCMath decimal addition and multiplication by default; `offPrecision()` selects float for sequence values. |
+| `GeometricSequence` | Uses `Number::pow()` for the exponent; sequence values can be switched to float with `offPrecision()`. |
+| `Recurrence` | Uses the supplied rule; float mode passes float-mode terms and rebinds results, while independent calculations inside the rule remain caller-controlled. |
 | `Factorial`, `Permutation`, `Combination`, `Multinomial` | Exact decimal multiplication; `Combination` and `Multinomial` use rounded division. |
 | `Divisibility::quotient()` | Uses `bcdiv(..., 0)` on absolute decimal strings, so the truncation is exact for integer inputs. |
 | `Divisibility::remainder()` | Exact subtraction after truncation. |
@@ -573,6 +593,8 @@ $exponents = $factorization->exponents();
 ```
 
 ## Related modules
+
+- [precision.md](precision.md)
 
 - [algebra.md](algebra.md)
 - [number.md](number.md)

@@ -33,9 +33,22 @@ final class Uniform implements ContinuousDistribution
      *
      * @throws InvalidArgumentException If a >= b.
      */
-    public static function of(int|float|string|Number $a, int|float|string|Number $b): self
+    public static function of(
+        int|float|string|Number $a,
+        int|float|string|Number $b,
+        bool $precision = true,
+    ): self
     {
-        return new self(Number::of($a), Number::of($b));
+        $backend = ! $precision;
+        return new self(
+            Number::of($a)->withBackend($backend),
+            Number::of($b)->withBackend($backend),
+        );
+    }
+
+    public function offPrecision(): self
+    {
+        return new self($this->a->offPrecision(), $this->b->offPrecision());
     }
 
     /**

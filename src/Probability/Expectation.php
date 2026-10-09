@@ -17,8 +17,15 @@ final class Expectation
         }
     }
 
-    public static function of(RandomVariable $variable, ProbabilityMeasure $measure): self
+    public static function of(
+        RandomVariable $variable,
+        ProbabilityMeasure $measure,
+        bool $precision = true,
+    ): self
     {
+        $variable = $variable->withBackend(! $precision);
+        $measure = $measure->withBackend(! $precision);
+
         return new self($variable, $measure);
     }
 
@@ -32,5 +39,10 @@ final class Expectation
         }
 
         return $sum;
+    }
+
+    public function offPrecision(): self
+    {
+        return new self($this->variable->offPrecision(), $this->measure->offPrecision());
     }
 }

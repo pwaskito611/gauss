@@ -24,9 +24,10 @@ final class NewtonRaphson
         int|float|string|Number $initialGuess,
         int|float|string|Number $tolerance = '0.000001',
         int $maxIterations = 100,
+        bool $precision = true,
     ): Number {
-        $x = Number::of($initialGuess);
-        $tol = Number::of($tolerance);
+        $x = Number::of($initialGuess)->withBackend(! $precision);
+        $tol = Number::of($tolerance)->withBackend(! $precision);
 
         if ($tol->compare(0) <= 0) {
             throw new InvalidArgumentException('Tolerance must be positive.');
@@ -36,14 +37,19 @@ final class NewtonRaphson
             throw new InvalidArgumentException('Maximum iterations must be positive.');
         }
 
+        $evaluate = static function (callable $callback, Number $point): Number {
+            $value = Number::of($callback($point));
+            return $value->withBackend($point->usesFloatBackend());
+        };
+
         for ($iteration = 0; $iteration < $maxIterations; $iteration++) {
-            $fx = $function($x);
+            $fx = $evaluate($function, $x);
 
             if ($fx->compare(0) === 0) {
                 return $x;
             }
 
-            $dfx = $derivative($x);
+            $dfx = $evaluate($derivative, $x);
 
             if ($dfx->compare(0) === 0) {
                 throw new LogicException('Newton-Raphson derivative is zero at the current iterate.');
@@ -59,7 +65,7 @@ final class NewtonRaphson
             $x = $next;
 
             if ($iteration === $maxIterations - 1) {
-                $fFinal = $function($x);
+                $fFinal = $evaluate($function, $x);
 
                 if ($fFinal->compare(0) === 0) {
                     return $x;

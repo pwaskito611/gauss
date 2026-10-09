@@ -21,9 +21,10 @@ final class SimpsonRule
         int|float|string|Number $lower,
         int|float|string|Number $upper,
         int $subdivisions = 100,
+        bool $precision = true,
     ): Number {
-        $a = Number::of($lower);
-        $b = Number::of($upper);
+        $a = Number::of($lower)->withBackend(! $precision);
+        $b = Number::of($upper)->withBackend(! $precision);
 
         if ($subdivisions <= 0) {
             throw new InvalidArgumentException('The number of subdivisions must be positive.');
@@ -38,17 +39,21 @@ final class SimpsonRule
         }
 
         if ($a->compare($b) === 0) {
-            return Number::of(0);
+            return Number::of(0)->withBackend($a->usesFloatBackend() || $b->usesFloatBackend());
         }
 
         $n = Number::of($subdivisions);
         $step = $b->sub($a)->div($n);
-        $sum = $function($a)->add($function($b));
+        $evaluate = static function (Number $point) use ($function): Number {
+            $value = Number::of($function($point));
+            return $value->withBackend($point->usesFloatBackend());
+        };
+        $sum = $evaluate($a)->add($evaluate($b));
         $xi = $a;
 
         for ($index = 1; $index < $subdivisions; $index++) {
             $xi = $xi->add($step);
-            $term = $function($xi);
+            $term = $evaluate($xi);
 
             $sum = $sum->add(
                 $index % 2 === 0

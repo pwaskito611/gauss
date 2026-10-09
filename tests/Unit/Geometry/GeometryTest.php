@@ -37,6 +37,20 @@ final class GeometryTest extends TestCase
         self::assertSame('3', $line->distanceTo(Point::of(4, 3))->value());
     }
 
+    public function testOffPrecisionPropagatesThroughLineProjectionAndIsIsolated(): void
+    {
+        $line = Line::through(Point::of(0, 0), Vector::of(1, 1));
+        $floatLine = $line->offPrecision();
+        $projection = $floatLine->project(Point::of(3, 0));
+
+        self::assertSame('float', $floatLine->point()->coordinates()->get(0)->backend());
+        self::assertSame('float', $floatLine->direction()->get(0)->backend());
+        self::assertSame('float', $projection->coordinates()->get(0)->backend());
+        self::assertSame('float', $floatLine->distanceTo(Point::of(3, 0))->backend());
+        self::assertSame('bcmath', $line->point()->coordinates()->get(0)->backend());
+        self::assertSame('bcmath', $line->project(Point::of(3, 0))->coordinates()->get(0)->backend());
+    }
+
     public function testSegmentLengthAndMidpoint(): void
     {
         $segment = Segment::between(Point::of(0, 0), Point::of(6, 8));
@@ -64,6 +78,17 @@ final class GeometryTest extends TestCase
         self::assertSame('18.84955592153875943077586029967701730518301639625066', $circle->circumference()->value());
         self::assertTrue($circle->contains(Point::of(2, 0)));
         self::assertFalse($circle->contains(Point::of(4, 0)));
+    }
+
+    public function testOffPrecisionPropagatesThroughCircleAndSegment(): void
+    {
+        $circle = Circle::of(Point::of(0, 0), 3)->offPrecision();
+        $segment = Segment::between(Point::of(0, 0), Point::of(3, 4))->offPrecision();
+
+        self::assertSame('float', $circle->area()->backend());
+        self::assertSame('float', $circle->circumference()->backend());
+        self::assertSame('float', $segment->length()->backend());
+        self::assertSame('float', $segment->midpoint()->coordinates()->get(0)->backend());
     }
 
     public function testCompositionChainAcrossGeometricPrimitives(): void

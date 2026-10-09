@@ -6,17 +6,26 @@ The `Number` class is the central numeric base in Gauss. It is designed to make 
 
 ## Representation
 
-`Number` stores values as normalized decimal strings and relies on BCMath-based helpers for arithmetic and comparisons. Scientific-notation strings are expanded to decimal notation, and equivalent zero forms normalize to `"0"`. This avoids silently relying on native floating-point arithmetic for every operation.
+`Number` stores values as normalized decimal strings and uses BCMath-based
+helpers by default for arithmetic and comparisons. Calling `offPrecision()`
+returns a float-mode copy for native PHP floating-point arithmetic. Scientific-
+notation strings are expanded to decimal notation, and equivalent zero forms
+normalize to `"0"`. This keeps backend selection explicit rather than silently
+switching to floats.
 
 The PHP BCMath extension must be enabled at runtime. `Number::of()` accepts integers, floats, strings, and existing `Number` instances. Floats are converted using their round-trip decimal representation; any floating-point error already present in the value is preserved, so use strings when the decimal literal itself must be represented exactly. Non-finite floats such as `INF` and `NAN` are rejected.
 
 ## Precision model
 
-The implementation distinguishes between:
+The default BCMath implementation distinguishes between:
 
 - exact addition, subtraction, multiplication, and comparison on represented decimal values,
 - rounded division and square-root/exponential results,
 - and approximation in numerical algorithms that are inherently iterative.
+
+Float mode is an explicit alternative with native binary floating-point
+behavior. The complete API and limitations are documented in
+[Precision modes](../usage/precision.md).
 
 `mod()` accepts integer-like operands and uses Euclidean remainders. Negative powers use division, so their results follow the division rounding behavior.
 
@@ -46,7 +55,12 @@ The core arithmetic methods include:
 - `exp()`
 - `round()`
 
-Addition, subtraction, and multiplication preserve all represented decimal digits. Division chooses a scale based on the operands' decimal places and relative magnitudes, then rounds half-up; it is not exact for every quotient. `sqrt()` and `exp()` round to at most 50 fractional decimal places. `round()` also uses half-up rounding, away from zero at ties.
+In BCMath mode, addition, subtraction, and multiplication preserve all
+represented decimal digits. Division chooses a scale based on the operands'
+decimal places and relative magnitudes, then rounds half-up; it is not exact for
+every quotient. `sqrt()` and `exp()` round to at most 50 fractional decimal
+places. `round()` also uses half-up rounding, away from zero at ties. Float
+mode instead uses native PHP floats and their finite binary precision.
 
 `pow()` accepts integer exponents from `-10000` through `10000`; `exp()` accepts arguments in `[-10000, 10000]`. Decimal scale used by BCMath-backed operations is guarded at 100,000 places; this is an internal calculation-scale limit, not a limit on numeric magnitude. Scientific-notation input exponents are limited to `[-10000, 10000]`.
 

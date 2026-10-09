@@ -118,6 +118,17 @@ final class Polynomial
         return $this->coefficients[$degree] ?? $this->zero;
     }
 
+    public function offPrecision(): self
+    {
+        $coefficients = [];
+
+        foreach ($this->coefficients as $degree => $coefficient) {
+            $coefficients[$degree] = $coefficient->offPrecision();
+        }
+
+        return new self($coefficients, $this->zero->offPrecision());
+    }
+
     /**
      * @return array<int, Number>
      */

@@ -7,6 +7,8 @@ namespace Gauss\Tests\Integration\Linear;
 use Gauss\Linear\Matrix;
 use Gauss\Linear\LUDecomposition;
 use Gauss\Linear\QRDecomposition;
+use Gauss\Linear\LinearSystem;
+use Gauss\Linear\Vector;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
@@ -53,6 +55,19 @@ final class LinearDecompositionIntegrationTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        Matrix::of([[1, 2], [3, 4]])->multiplyVector(\Gauss\Linear\Vector::of(1));
+        Matrix::of([[1, 2], [3, 4]])->multiplyVector(Vector::of(1));
+    }
+
+    public function testOffPrecisionPropagatesThroughLinearSystemReductionAndSolution(): void
+    {
+        $solution = LinearSystem::of(
+            Matrix::of([[2, 0], [0, 4]]),
+            Vector::of(6, 8),
+        )->offPrecision()->solve();
+
+        self::assertSame('float', $solution->vector()->get(0)->backend());
+        self::assertSame('float', $solution->vector()->get(1)->backend());
+        self::assertSame('3', $solution->vector()->get(0)->value());
+        self::assertSame('2', $solution->vector()->get(1)->value());
     }
 }

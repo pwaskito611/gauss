@@ -31,6 +31,11 @@ final class Point
         return $this->coordinates;
     }
 
+    public function offPrecision(): self
+    {
+        return new self($this->coordinates->offPrecision());
+    }
+
     /**
      * Returns the Euclidean distance; the Number domain must support its sqrt.
      */
@@ -50,8 +55,10 @@ final class Point
      */
     public function midpoint(self $other): self
     {
-        $one = Number::of(1);
-        $two = Number::of(2);
+        $floatBackend = $this->coordinates->usesFloatBackend()
+            || $other->coordinates->usesFloatBackend();
+        $one = Number::of(1)->withBackend($floatBackend);
+        $two = Number::of(2)->withBackend($floatBackend);
         $zero = Number::of(0);
         if ($two->compare($zero) === 0) {
             throw new LogicException('Midpoint is undefined in characteristic 2.');

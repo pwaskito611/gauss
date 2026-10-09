@@ -39,6 +39,11 @@ final class Circle
         return $this->radius;
     }
 
+    public function offPrecision(): self
+    {
+        return new self($this->center->offPrecision(), $this->radius->offPrecision());
+    }
+
     /**
      * Returns pi times the squared radius, using Number::pi()'s representation.
      */
@@ -52,7 +57,10 @@ final class Circle
      */
     public function circumference(): Number
     {
-        return Number::of(2)->mul(Number::pi())->mul($this->radius);
+        return Number::of(2)
+            ->withBackend($this->radius->usesFloatBackend())
+            ->mul(Number::pi()->withBackend($this->radius->usesFloatBackend()))
+            ->mul($this->radius);
     }
 
     /**

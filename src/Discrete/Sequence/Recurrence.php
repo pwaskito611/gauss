@@ -44,6 +44,14 @@ final class Recurrence
         return $this->initialValues[0];
     }
 
+    public function offPrecision(): self
+    {
+        return new self(
+            array_map(static fn (Number $value): Number => $value->offPrecision(), $this->initialValues),
+            $this->rule,
+        );
+    }
+
     public function at(Number $n): Number
     {
         if (! preg_match('/^\d+$/', $n->value())) {
@@ -64,6 +72,9 @@ final class Recurrence
                 $values[count($values) - 1],
                 $values[count($values) - 2]
             );
+            if ($values[0]->usesFloatBackend() && ! $next->usesFloatBackend()) {
+                $next = $next->offPrecision();
+            }
             $values[] = $next;
         }
 

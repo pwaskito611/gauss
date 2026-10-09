@@ -18,6 +18,7 @@ final class LUDecomposition
         private readonly Matrix $upper,
         private readonly Matrix $permutation,
         private readonly int $swaps,
+        private readonly Matrix $source,
     ) {
     }
 
@@ -64,12 +65,17 @@ final class LUDecomposition
             }
         }
 
-        return new self(Matrix::of($lower), Matrix::of($upper), Matrix::of($permutation), $swaps);
+        return new self(Matrix::of($lower), Matrix::of($upper), Matrix::of($permutation), $swaps, $matrix);
     }
 
     public function L(): Matrix { return $this->lower; }
     public function U(): Matrix { return $this->upper; }
     public function P(): Matrix { return $this->permutation; }
+
+    public function offPrecision(): self
+    {
+        return self::of($this->source->offPrecision());
+    }
 
     public function solve(Vector $rhs): Vector
     {

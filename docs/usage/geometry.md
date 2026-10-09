@@ -15,6 +15,11 @@ values; operations involving division or square roots follow `Number`'s
 rounded precision behavior. Geometry calculations are therefore not
 universally exact.
 
+Geometry objects can be copied into native-float mode with `offPrecision()`;
+the mode follows their owned coordinates and parameters through Gauss geometry
+operations. BCMath remains the default. See [Precision modes](precision.md)
+for float limitations.
+
 ## Dimensionality
 
 | Type or operation | Dimensionality |
@@ -285,7 +290,9 @@ $circle->contains(Point::of(3, 4)); // true: also on circumference
 
 ## Precision model
 
-Geometry delegates numeric operations to `Number`. Exact decimal arithmetic
+The table describes the default BCMath mode. Geometry delegates numeric
+operations to `Number`; after calling `offPrecision()` on an object, its
+operations use native floats instead. Exact decimal arithmetic
 applies to addition, subtraction, and multiplication of stored values.
 Division uses rounded decimal arithmetic; square roots use half-up rounding
 to 50 decimal places. `Number::pi()` is a fixed approximation with 50 decimal

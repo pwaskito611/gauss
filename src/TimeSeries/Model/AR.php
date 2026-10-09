@@ -34,8 +34,13 @@ final class AR
         $this->coefficients = $coefficients;
     }
 
-    public static function fit(TimeSeries $series, int $order): self
+    public static function fit(TimeSeries $series, int $order, bool $precision = true): self
     {
+        $series = TimeSeries::of(array_map(
+            static fn (Number $value): Number => $value->withBackend(! $precision),
+            $series->values(),
+        ));
+
         if ($order < 1) {
             throw new InvalidArgumentException('AR order must be at least 1.');
         }
@@ -94,7 +99,7 @@ final class AR
                 $coefficients[] = $vector[$lag];
             }
         } else {
-            $intercept = Statistics::mean($values);
+            $intercept = Statistics::mean($values, $precision);
             foreach (range(1, $order) as $lag) {
                 $coefficients[] = Number::of(0);
             }
@@ -106,6 +111,16 @@ final class AR
     public function order(): int
     {
         return $this->order;
+    }
+
+    public function offPrecision(): self
+    {
+        return new self(
+            $this->order,
+            array_map(static fn (Number $value): Number => $value->offPrecision(), $this->coefficients),
+            $this->intercept->offPrecision(),
+            $this->series->offPrecision(),
+        );
     }
 
     /** @return list<Number> */

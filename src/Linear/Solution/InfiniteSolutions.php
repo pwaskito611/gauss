@@ -29,4 +29,9 @@ final class InfiniteSolutions implements LinearSystemSolution
     {
         return $this->freeColumns;
     }
+
+    public function offPrecision(): self
+    {
+        return new self($this->reducedMatrix->offPrecision(), $this->freeColumns);
+    }
 }

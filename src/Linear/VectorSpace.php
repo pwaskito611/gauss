@@ -56,6 +56,14 @@ final class VectorSpace
         return $this->basis;
     }
 
+    public function offPrecision(): self
+    {
+        return new self(
+            array_map(static fn (Vector $vector): Vector => $vector->offPrecision(), $this->basis),
+            $this->ambientDimension,
+        );
+    }
+
     public function contains(Vector $vector): bool
     {
         if ($vector->dimension() !== $this->ambientDimension) {

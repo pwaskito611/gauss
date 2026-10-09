@@ -29,6 +29,20 @@ final class SequenceTest extends TestCase
         self::assertSame('54', $sequence->at(Number::of(4))->value());
     }
 
+    public function testNumericSequencesUseFloatArithmeticWhenPrecisionIsDisabled(): void
+    {
+        $arithmetic = ArithmeticSequence::from(Number::of(2), Number::of(3));
+        $floatArithmetic = $arithmetic->offPrecision();
+        $geometric = GeometricSequence::from(Number::of(2), Number::of(3));
+        $floatGeometric = $geometric->offPrecision();
+
+        self::assertSame('bcmath', $arithmetic->at(Number::of(5))->backend());
+        self::assertSame('float', $floatArithmetic->at(Number::of(5))->backend());
+        self::assertSame('float', $floatGeometric->at(Number::of(4))->backend());
+        self::assertSame('14', $floatArithmetic->at(Number::of(5))->value());
+        self::assertSame('54', $floatGeometric->at(Number::of(4))->value());
+    }
+
     public function testRecurrence(): void
     {
         $sequence = Recurrence::of(
@@ -38,6 +52,30 @@ final class SequenceTest extends TestCase
 
         self::assertSame('1', $sequence->first()->value());
         self::assertSame('13', $sequence->at(Number::of(7))->value());
+    }
+
+    public function testFloatRecurrencePassesFloatOperandsAndRebindsCallbackResults(): void
+    {
+        $callbackBackends = [];
+        $sequence = Recurrence::of(
+            [Number::of(1), Number::of(1)],
+            static function (Number $previous, Number $before) use (&$callbackBackends): Number {
+                $result = $previous->add($before);
+                $callbackBackends[] = [$previous->backend(), $before->backend(), $result->backend()];
+                return $result;
+            },
+        )->offPrecision();
+
+        $result = $sequence->at(Number::of(7));
+
+        self::assertNotEmpty($callbackBackends);
+        foreach ($callbackBackends as [$previousBackend, $beforeBackend, $resultBackend]) {
+            self::assertSame('float', $previousBackend);
+            self::assertSame('float', $beforeBackend);
+            self::assertSame('float', $resultBackend);
+        }
+        self::assertSame('float', $result->backend());
+        self::assertSame('13', $result->value());
     }
 
     public function testRecurrenceRequiresExactlyTwoInitialValues(): void

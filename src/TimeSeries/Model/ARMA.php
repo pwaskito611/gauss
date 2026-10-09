@@ -49,8 +49,17 @@ final class ARMA
         $this->maCoefficients = $maCoefficients;
     }
 
-    public static function fit(TimeSeries $series, int $arOrder, int $maOrder): self
-    {
+    public static function fit(
+        TimeSeries $series,
+        int $arOrder,
+        int $maOrder,
+        bool $precision = true,
+    ): self {
+        $series = TimeSeries::of(array_map(
+            static fn (Number $value): Number => $value->withBackend(! $precision),
+            $series->values(),
+        ));
+
         if ($arOrder < 1 || $maOrder < 1) {
             throw new InvalidArgumentException('ARMA orders must each be at least 1.');
         }
@@ -69,8 +78,8 @@ final class ARMA
             intdiv($sampleCount - 1, 2),
         );
         $values = $series->values();
-        $initialResiduals = self::initialResiduals($values, $initialOrder);
-        $intercept = Statistics::mean($values);
+        $initialResiduals = self::initialResiduals($values, $initialOrder, $precision);
+        $intercept = Statistics::mean($values, $precision);
         $arCoefficients = array_fill(0, $arOrder, Number::of(0));
         $maCoefficients = array_fill(0, $maOrder, Number::of(0));
         $residuals = $initialResiduals;
@@ -135,6 +144,18 @@ final class ARMA
     public function arOrder(): int
     {
         return $this->arOrder;
+    }
+
+    public function offPrecision(): self
+    {
+        return new self(
+            $this->arOrder,
+            $this->maOrder,
+            array_map(static fn (Number $value): Number => $value->offPrecision(), $this->arCoefficients),
+            array_map(static fn (Number $value): Number => $value->offPrecision(), $this->maCoefficients),
+            $this->intercept->offPrecision(),
+            $this->series->offPrecision(),
+        );
     }
 
     public function maOrder(): int
@@ -280,7 +301,11 @@ final class ARMA
      * @param list<Number> $values
      * @return list<Number>
      */
-    private static function initialResiduals(array $values, int $maximumOrder): array
+    private static function initialResiduals(
+        array $values,
+        int $maximumOrder,
+        bool $precision,
+    ): array
     {
         for ($order = $maximumOrder; $order >= 1; $order--) {
             $rows = [];
@@ -311,7 +336,7 @@ final class ARMA
             return $residuals;
         }
 
-        $mean = Statistics::mean($values);
+        $mean = Statistics::mean($values, $precision);
 
         return array_map(
             static fn (Number $value): Number => self::limitPrecision($value->sub($mean)),

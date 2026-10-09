@@ -16,7 +16,13 @@ final class ProbabilityMeasure
     private readonly array $weights;
 
     /** @param array<mixed, Probability|string|int|float|Number|array{0:mixed,1:Probability|string|int|float|Number}> $weights */
-    private function __construct(SampleSpace $space, array $weights, bool $explicitMap = false)
+    private function __construct(
+        SampleSpace $space,
+        array $weights,
+        bool $explicitMap = false,
+        bool $validateTotal = true,
+        bool $floatBackend = false,
+    )
     {
         $probabilities = [];
         $outcomes = $space->outcomes();
@@ -61,7 +67,12 @@ final class ProbabilityMeasure
             if (! array_key_exists($outcomeIdentity, $entriesByIdentity)) {
                 throw new InvalidArgumentException('Each sample-space outcome must have a probability weight.');
             }
-            $probabilities[$outcomeIdentity] = Probability::of($entriesByIdentity[$outcomeIdentity]);
+            $weightValue = $entriesByIdentity[$outcomeIdentity];
+            if ($weightValue instanceof Probability) {
+                $weightValue = $weightValue->value();
+            }
+            $weight = Number::of($weightValue)->withBackend($floatBackend);
+            $probabilities[$outcomeIdentity] = Probability::of($weight);
         }
 
         if (count($sourceIdentities) !== count($outcomes)) {
@@ -75,7 +86,7 @@ final class ProbabilityMeasure
             $sum = $sum->add($probability->value());
         }
 
-        if ($sum->compare($one) !== 0) {
+        if ($validateTotal && $sum->compare($one) !== 0) {
             throw new InvalidArgumentException('Probability weights for a sample space must sum to exactly 1.');
         }
 
@@ -84,9 +95,9 @@ final class ProbabilityMeasure
     }
 
     /** @param list<Probability|string|int|float|Number> $weights */
-    public static function of(SampleSpace $space, array $weights): self
+    public static function of(SampleSpace $space, array $weights, bool $precision = true): self
     {
-        return new self($space, $weights);
+        return new self($space, $weights, false, true, ! $precision);
     }
 
     /**
@@ -95,14 +106,14 @@ final class ProbabilityMeasure
      *
      * @param array<mixed, Probability|string|int|float|Number|array{0:mixed,1:Probability|string|int|float|Number}> $weights
      */
-    public static function fromMap(SampleSpace $space, array $weights): self
+    public static function fromMap(SampleSpace $space, array $weights, bool $precision = true): self
     {
-        return new self($space, $weights, true);
+        return new self($space, $weights, true, true, ! $precision);
     }
 
-    public static function uniform(SampleSpace $space): self
+    public static function uniform(SampleSpace $space, bool $precision = true): self
     {
-        $count = Number::of($space->size());
+        $count = Number::of($space->size())->withBackend(! $precision);
         $sample = $count->one();
         $unitWeight = $sample->div($count);
         $weights = array_fill(0, $space->size(), $unitWeight);
@@ -112,7 +123,7 @@ final class ProbabilityMeasure
         }
         $weights[$space->size() - 1] = $sample->sub($sum);
 
-        return new self($space, $weights);
+        return new self($space, $weights, false, true, ! $precision);
     }
 
     public function sampleSpace(): SampleSpace
@@ -120,12 +131,31 @@ final class ProbabilityMeasure
         return $this->space;
     }
 
+    public function offPrecision(): self
+    {
+        return $this->withBackend(true);
+    }
+
+    /** @internal Rebinds stored probabilities at a Gauss-owned computation boundary. */
+    public function withBackend(bool $floatBackend): self
+    {
+        $weights = [];
+        foreach ($this->space->outcomes() as $outcome) {
+            $weights[] = $this->probabilityFor($outcome)->value()->withBackend($floatBackend);
+        }
+
+        return new self($this->space, $weights, false, false, $floatBackend);
+    }
+
     public function probabilityOf(Event $event): Probability
     {
         $this->assertSameSampleSpace($event);
 
         if ($event->isEmpty()) {
-            return Probability::of(Number::of(0));
+            $sample = $this->probabilityFor($this->space->outcomes()[0])->value();
+            return Probability::of(
+                Number::of(0)->withBackend($sample->usesFloatBackend())
+            );
         }
 
         $sum = Number::of(0);

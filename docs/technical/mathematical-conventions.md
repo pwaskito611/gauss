@@ -28,4 +28,4 @@ Distribution classes accept numeric parameters like a Poisson rate, and they enf
 
 ## Precision semantics
 
-Addition, subtraction, multiplication, and comparison preserve the represented decimal values. Division, square root, and exponential use controlled rounding, and iterative numerical methods may be approximate by design; see [Precision](./precision.md) for the current limits and rounding model.
+In the default BCMath mode, addition, subtraction, multiplication, and comparison preserve the represented decimal values. Division, square root, and exponential use controlled rounding, and iterative numerical methods may be approximate by design. Explicit float mode follows native PHP float behavior; see [Precision](./precision.md) for the current limits and rounding model.

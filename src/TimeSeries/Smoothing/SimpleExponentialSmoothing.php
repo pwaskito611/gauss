@@ -17,9 +17,19 @@ final class SimpleExponentialSmoothing
         }
     }
 
-    public static function smooth(TimeSeries $series, int|float|string|Number $alpha): TimeSeries
+    public static function smooth(
+        TimeSeries $series,
+        int|float|string|Number $alpha,
+        bool $precision = true,
+    ): TimeSeries
     {
-        return (new self(Number::of($alpha)))->apply($series);
+        $series = TimeSeries::of(array_map(
+            static fn (Number $value): Number => $value->withBackend(! $precision),
+            $series->values(),
+        ));
+        $smoothingFactor = Number::of($alpha)->withBackend(! $precision);
+
+        return (new self($smoothingFactor))->apply($series);
     }
 
     public function apply(TimeSeries $series): TimeSeries
@@ -40,5 +50,10 @@ final class SimpleExponentialSmoothing
         }
 
         return TimeSeries::of($smoothed);
+    }
+
+    public function offPrecision(): self
+    {
+        return new self($this->alpha->offPrecision());
     }
 }

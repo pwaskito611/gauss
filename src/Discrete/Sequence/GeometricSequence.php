@@ -24,6 +24,11 @@ final class GeometricSequence
         return $this->first;
     }
 
+    public function offPrecision(): self
+    {
+        return new self($this->first->offPrecision(), $this->ratio->offPrecision());
+    }
+
     public function at(Number $n): Number
     {
         if (! preg_match('/^\d+$/', $n->value())) {

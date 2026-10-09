@@ -111,6 +111,24 @@ final class DistributionTest extends TestCase
         self::assertNumberApproximately('1', $distribution->cdf(-1)->value()->add($distribution->cdf(1)->value()));
     }
 
+    public function testOffPrecisionPropagatesThroughDistributionEvaluation(): void
+    {
+        $distribution = Normal::of(0, 1)->offPrecision();
+        $density = $distribution->pdf(1);
+        $cumulative = $distribution->cdf(1)->value();
+
+        self::assertSame('float', $distribution->expectation()->backend());
+        self::assertSame('float', $density->backend());
+        self::assertSame('float', $cumulative->backend());
+        self::assertSame('bcmath', Normal::of(0, 1)->pdf(1)->backend());
+    }
+
+    public function testDistributionFactoryCanSelectFloatPrecision(): void
+    {
+        self::assertSame('float', Normal::of(0, 1, false)->pdf(1)->backend());
+        self::assertSame('bcmath', Normal::of(0, 1)->pdf(1)->backend());
+    }
+
     public function testExponentialDistribution(): void
     {
         $distribution = Exponential::of(2);

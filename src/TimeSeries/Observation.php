@@ -20,6 +20,11 @@ final class Observation
         return $this->index;
     }
 
+    public function offPrecision(): self
+    {
+        return new self($this->index, $this->value->offPrecision());
+    }
+
     public function value(): Number
     {
         return $this->value;

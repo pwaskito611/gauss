@@ -27,6 +27,7 @@ final class CoordinateDescent
         int|float|string|Number $tolerance = '0.000001',
         int $maxIterations = 1000,
         ?BoxConstraint $bounds = null,
+        bool $precision = true,
     ): OptimizationResult {
         if ($bounds === null) {
             throw new InvalidArgumentException('Coordinate descent requires explicit search bounds.');
@@ -40,7 +41,21 @@ final class CoordinateDescent
             throw new InvalidArgumentException('Initial point must be inside the supplied bounds.');
         }
 
-        $tol = Number::of($tolerance);
+        $initial = Vector::of(...array_map(
+            static fn (Number $value): Number => $value->withBackend(! $precision),
+            $initial->values(),
+        ));
+        $bounds = BoxConstraint::from(
+            Vector::of(...array_map(
+                static fn (Number $value): Number => $value->withBackend(! $precision),
+                $bounds->lower()->values(),
+            )),
+            Vector::of(...array_map(
+                static fn (Number $value): Number => $value->withBackend(! $precision),
+                $bounds->upper()->values(),
+            )),
+        );
+        $tol = Number::of($tolerance)->withBackend(! $precision);
 
         if ($tol->compare(0) <= 0) {
             throw new InvalidArgumentException('Tolerance must be positive.');
@@ -51,7 +66,7 @@ final class CoordinateDescent
         }
 
         $current = $initial;
-        $currentValue = Number::of($objective($current));
+        $currentValue = self::evaluateObjective($objective, $current);
 
         for ($iteration = 0; $iteration < $maxIterations; $iteration++) {
             $previous = $current;
@@ -76,7 +91,7 @@ final class CoordinateDescent
                         $values[] = $current->get($dimensionIndex);
                     }
 
-                    return $objective(Vector::of(...$values));
+                    return self::evaluateObjective($objective, Vector::of(...$values));
                 };
 
                 $candidate = GoldenSectionSearch::minimize(
@@ -85,6 +100,7 @@ final class CoordinateDescent
                     $upper,
                     $tol,
                     200,
+                    $precision,
                 );
 
                 $updated = [];
@@ -104,5 +120,14 @@ final class CoordinateDescent
         }
 
         return new OptimizationResult($current, $currentValue, $maxIterations, false);
+    }
+
+    /** @param callable(Vector): Number $objective */
+    private static function evaluateObjective(callable $objective, Vector $point): Number
+    {
+        $value = Number::of($objective($point));
+        $value = $value->withBackend($point->usesFloatBackend());
+
+        return $value;
     }
 }

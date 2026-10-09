@@ -36,7 +36,19 @@ $scaled = $poly->scale($three);
 echo $scaled->coefficient(1)->value(); // 9
 ```
 
-This matters because polynomial arithmetic delegates numeric behavior and precision to `Number` rather than PHP's floating-point arithmetic.
+This matters because polynomial arithmetic delegates numeric behavior and
+precision to `Number`. BCMath remains the default; algebra objects can opt into
+float arithmetic by converting an immutable copy:
+
+```php
+$floatPoly = $poly->offPrecision();
+$value = $floatPoly->evaluate(Number::of(2));
+
+$value->backend(); // "float"
+```
+
+The mode propagates from stored coefficients through evaluation and algebra
+operations. See [Precision modes](precision.md) for numeric trade-offs.
 
 ## Monomial
 
@@ -604,5 +616,6 @@ A few edge cases are worth keeping in mind when using the algebra API:
 ## Related modules
 
 - [number.md](number.md)
+- [precision.md](precision.md)
 - [linear.md](linear.md)
 - [numerical.md](numerical.md)

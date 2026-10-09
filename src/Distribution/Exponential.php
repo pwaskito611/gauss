@@ -33,9 +33,14 @@ final class Exponential implements ContinuousDistribution
      *
      * @throws InvalidArgumentException If rate <= 0.
      */
-    public static function of(int|float|string|Number $rate): self
+    public static function of(int|float|string|Number $rate, bool $precision = true): self
     {
-        return new self(Number::of($rate));
+        return new self(Number::of($rate)->withBackend(! $precision));
+    }
+
+    public function offPrecision(): self
+    {
+        return new self($this->rate->offPrecision());
     }
 
     /**

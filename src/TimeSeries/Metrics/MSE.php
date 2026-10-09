@@ -13,7 +13,7 @@ final class MSE
      * @param list<int|float|string|Number> $actual
      * @param list<int|float|string|Number> $predicted
      */
-    public static function calculate(array $actual, array $predicted): Number
+    public static function calculate(array $actual, array $predicted, bool $precision = true): Number
     {
         if ($actual === [] || $predicted === []) {
             throw new InvalidArgumentException('Actual and predicted series must not be empty.');
@@ -25,7 +25,9 @@ final class MSE
 
         $sum = Number::of(0);
         foreach ($actual as $index => $value) {
-            $difference = Number::of($value)->sub(Number::of($predicted[$index]));
+            $actualValue = Number::of($value)->withBackend(! $precision);
+            $predictedValue = Number::of($predicted[$index])->withBackend(! $precision);
+            $difference = $actualValue->sub($predictedValue);
             $sum = $sum->add($difference->pow(2));
         }
 

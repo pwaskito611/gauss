@@ -27,6 +27,15 @@ final class ARMATest extends TestCase
         self::assertNotEmpty($model->residuals()->observations());
     }
 
+    public function testArmaFitPrecisionPropagatesThroughNestedStatisticsAndRegression(): void
+    {
+        $model = ARMA::fit(TimeSeries::of([1, 2, 4, 3, 6, 5, 8, 7]), 1, 1, false);
+
+        self::assertSame('float', $model->intercept()->backend());
+        self::assertSame('float', $model->predict(1)->last()->value()->backend());
+        self::assertSame('float', $model->residuals()->first()->value()->backend());
+    }
+
     public function testArmaPredictReturnsOnlyForecastObservations(): void
     {
         $series = TimeSeries::of([1, 2, 3, 4, 5, 6, 7, 8]);

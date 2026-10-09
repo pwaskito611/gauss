@@ -17,21 +17,26 @@ final class Statistics
         return $data instanceof Vector ? $data->dimension() : count($data);
     }
 
-    public static function sum(array|Vector $data): Number
+    /**
+     * @param bool $precision True keeps the default decimal backend; false selects floats where supported.
+     */
+    public static function sum(array|Vector $data, bool $precision = true): Number
     {
-        return self::sumOf(self::values($data));
+        return self::sumOf(self::values($data, $precision));
     }
 
-    public static function mean(array|Vector $data): Number
+    /** @param bool $precision True keeps the default decimal backend; false selects floats where supported. */
+    public static function mean(array|Vector $data, bool $precision = true): Number
     {
-        $values = self::values($data);
+        $values = self::values($data, $precision);
 
         return self::meanOf($values);
     }
 
-    public static function median(array|Vector $data): Number
+    /** @param bool $precision True keeps the default decimal backend; false selects floats where supported. */
+    public static function median(array|Vector $data, bool $precision = true): Number
     {
-        $values = self::sortedValues($data);
+        $values = self::sortedValues($data, $precision);
         return self::medianFromSortedValues($values);
     }
 
@@ -58,9 +63,10 @@ final class Statistics
         return $values[$middle - 1]->add($values[$middle])->div(Number::of(2));
     }
 
-    public static function mode(array|Vector $data): Number
+    /** @param bool $precision True keeps the default decimal backend; false selects floats where supported. */
+    public static function mode(array|Vector $data, bool $precision = true): Number
     {
-        $values = self::values($data);
+        $values = self::values($data, $precision);
         $groups = [];
         $mode = $values[0];
         $bestCount = 0;
@@ -79,9 +85,10 @@ final class Statistics
         return $mode;
     }
 
-    public static function min(array|Vector $data): Number
+    /** @param bool $precision True keeps the default decimal backend; false selects floats where supported. */
+    public static function min(array|Vector $data, bool $precision = true): Number
     {
-        return self::minOf(self::values($data));
+        return self::minOf(self::values($data, $precision));
     }
 
     /** @param list<Number> $values */
@@ -98,9 +105,10 @@ final class Statistics
         return $minimum;
     }
 
-    public static function max(array|Vector $data): Number
+    /** @param bool $precision True keeps the default decimal backend; false selects floats where supported. */
+    public static function max(array|Vector $data, bool $precision = true): Number
     {
-        return self::maxOf(self::values($data));
+        return self::maxOf(self::values($data, $precision));
     }
 
     /** @param list<Number> $values */
@@ -117,22 +125,25 @@ final class Statistics
         return $maximum;
     }
 
-    public static function range(array|Vector $data): Number
+    /** @param bool $precision True keeps the default decimal backend; false selects floats where supported. */
+    public static function range(array|Vector $data, bool $precision = true): Number
     {
-        $values = self::values($data);
+        $values = self::values($data, $precision);
 
         return self::maxOf($values)->sub(self::minOf($values));
     }
 
-    public static function populationVariance(array|Vector $data): Number
+    /** @param bool $precision True keeps the default decimal backend; false selects floats where supported. */
+    public static function populationVariance(array|Vector $data, bool $precision = true): Number
     {
-        $values = self::values($data);
+        $values = self::values($data, $precision);
         return self::populationVarianceOf($values);
     }
 
-    public static function sampleVariance(array|Vector $data): Number
+    /** @param bool $precision True keeps the default decimal backend; false selects floats where supported. */
+    public static function sampleVariance(array|Vector $data, bool $precision = true): Number
     {
-        $values = self::values($data);
+        $values = self::values($data, $precision);
         if (count($values) < 2) {
             throw new InvalidArgumentException('Sample variance requires at least two observations.');
         }
@@ -147,19 +158,22 @@ final class Statistics
         return $sum->div(Number::of(count($values) - 1));
     }
 
-    public static function populationStandardDeviation(array|Vector $data): Number
+    /** @param bool $precision True keeps the default decimal backend; false selects floats where supported. */
+    public static function populationStandardDeviation(array|Vector $data, bool $precision = true): Number
     {
-        return self::populationVariance($data)->sqrt();
+        return self::populationVariance($data, $precision)->sqrt();
     }
 
-    public static function sampleStandardDeviation(array|Vector $data): Number
+    /** @param bool $precision True keeps the default decimal backend; false selects floats where supported. */
+    public static function sampleStandardDeviation(array|Vector $data, bool $precision = true): Number
     {
-        return self::sampleVariance($data)->sqrt();
+        return self::sampleVariance($data, $precision)->sqrt();
     }
 
-    public static function meanAbsoluteDeviation(array|Vector $data): Number
+    /** @param bool $precision True keeps the default decimal backend; false selects floats where supported. */
+    public static function meanAbsoluteDeviation(array|Vector $data, bool $precision = true): Number
     {
-        $values = self::values($data);
+        $values = self::values($data, $precision);
         $mean = self::meanOf($values);
         $sum = Number::of(0);
 
@@ -170,9 +184,10 @@ final class Statistics
         return $sum->div(Number::of(count($values)));
     }
 
-    public static function medianAbsoluteDeviation(array|Vector $data): Number
+    /** @param bool $precision True keeps the default decimal backend; false selects floats where supported. */
+    public static function medianAbsoluteDeviation(array|Vector $data, bool $precision = true): Number
     {
-        $values = self::values($data);
+        $values = self::values($data, $precision);
         $median = self::medianOfValues($values);
         $deviations = [];
 
@@ -183,9 +198,10 @@ final class Statistics
         return self::medianOfValues($deviations);
     }
 
-    public static function interquartileRange(array|Vector $data): Number
+    /** @param bool $precision True keeps the default decimal backend; false selects floats where supported. */
+    public static function interquartileRange(array|Vector $data, bool $precision = true): Number
     {
-        $values = self::sortedValues($data);
+        $values = self::sortedValues($data, $precision);
         $three = Number::of(3);
         $four = Number::of(4);
 
@@ -194,9 +210,10 @@ final class Statistics
     }
 
     /** Uses the population standard deviation, not the sample estimator. */
-    public static function coefficientOfVariation(array|Vector $data): Number
+    /** @param bool $precision True keeps the default decimal backend; false selects floats where supported. */
+    public static function coefficientOfVariation(array|Vector $data, bool $precision = true): Number
     {
-        $values = self::values($data);
+        $values = self::values($data, $precision);
         $mean = self::meanOf($values);
         if ($mean->compare(Number::of(0)) === 0) {
             throw new DivisionByZeroError('Coefficient of variation is undefined for a zero mean.');
@@ -208,14 +225,24 @@ final class Statistics
     public static function quantile(
         array|Vector $data,
         int|float|string|Number $probability,
+        bool $precision = true,
     ): Number {
-        $values = self::sortedValues($data);
-        return self::quantileFromSortedValues($values, Number::of($probability));
+        $values = self::sortedValues($data, $precision);
+        $quantileProbability = Number::of($probability);
+        $quantileProbability = $quantileProbability->withBackend(! $precision);
+        return self::quantileFromSortedValues($values, $quantileProbability);
     }
 
     /** @param list<Number> $values */
     private static function quantileFromSortedValues(array $values, Number $probability): Number
     {
+        foreach ($values as $value) {
+            if ($value->usesFloatBackend() && ! $probability->usesFloatBackend()) {
+                $probability = $probability->offPrecision();
+                break;
+            }
+        }
+
         if (
             $probability->compare(Number::of(0)) < 0
             || $probability->compare(Number::of(1)) > 0
@@ -258,32 +285,43 @@ final class Statistics
     public static function percentile(
         array|Vector $data,
         int|float|string|Number $percentile,
+        bool $precision = true,
     ): Number {
-        return self::quantile($data, Number::of($percentile)->div(Number::of(100)));
+        $value = Number::of($percentile)->withBackend(! $precision);
+        return self::quantile(
+            $data,
+            $value->div(Number::of(100)),
+            $precision
+        );
     }
 
-    public static function quartile(array|Vector $data, int $quartile): Number
+    /** @param bool $precision True keeps the default decimal backend; false selects floats where supported. */
+    public static function quartile(array|Vector $data, int $quartile, bool $precision = true): Number
     {
         if ($quartile < 0 || $quartile > 4) {
             throw new InvalidArgumentException('Quartile must be between 0 and 4.');
         }
 
-        return self::quantile($data, Number::of($quartile)->div(Number::of(4)));
+        $value = Number::of($quartile)->withBackend(! $precision);
+        return self::quantile($data, $value->div(Number::of(4)), $precision);
     }
 
-    public static function decile(array|Vector $data, int $decile): Number
+    /** @param bool $precision True keeps the default decimal backend; false selects floats where supported. */
+    public static function decile(array|Vector $data, int $decile, bool $precision = true): Number
     {
         if ($decile < 0 || $decile > 10) {
             throw new InvalidArgumentException('Decile must be between 0 and 10.');
         }
 
-        return self::quantile($data, Number::of($decile)->div(Number::of(10)));
+        $value = Number::of($decile)->withBackend(! $precision);
+        return self::quantile($data, $value->div(Number::of(10)), $precision);
     }
 
-    public static function moment(array|Vector $data, int $order): Number
+    /** @param bool $precision True keeps the default decimal backend; false selects floats where supported. */
+    public static function moment(array|Vector $data, int $order, bool $precision = true): Number
     {
         self::assertNonNegativeOrder($order);
-        $values = self::values($data);
+        $values = self::values($data, $precision);
         $sum = Number::of(0);
 
         foreach ($values as $value) {
@@ -293,15 +331,17 @@ final class Statistics
         return $sum->div(Number::of(count($values)));
     }
 
-    public static function centralMoment(array|Vector $data, int $order): Number
+    /** @param bool $precision True keeps the default decimal backend; false selects floats where supported. */
+    public static function centralMoment(array|Vector $data, int $order, bool $precision = true): Number
     {
         self::assertNonNegativeOrder($order);
-        return self::centralMomentOf(self::values($data), $order);
+        return self::centralMomentOf(self::values($data, $precision), $order);
     }
 
-    public static function skewness(array|Vector $data): Number
+    /** @param bool $precision True keeps the default decimal backend; false selects floats where supported. */
+    public static function skewness(array|Vector $data, bool $precision = true): Number
     {
-        $values = self::values($data);
+        $values = self::values($data, $precision);
         $standardDeviation = self::populationVarianceOf($values)->sqrt();
         if ($standardDeviation->compare(Number::of(0)) === 0) {
             throw new DivisionByZeroError('Skewness is undefined for zero variance.');
@@ -310,9 +350,10 @@ final class Statistics
         return self::centralMomentOf($values, 3)->div($standardDeviation->pow(3));
     }
 
-    public static function kurtosis(array|Vector $data): Number
+    /** @param bool $precision True keeps the default decimal backend; false selects floats where supported. */
+    public static function kurtosis(array|Vector $data, bool $precision = true): Number
     {
-        $values = self::values($data);
+        $values = self::values($data, $precision);
         $variance = self::populationVarianceOf($values);
         if ($variance->compare(Number::of(0)) === 0) {
             throw new DivisionByZeroError('Kurtosis is undefined for zero variance.');
@@ -322,15 +363,17 @@ final class Statistics
     }
 
     /** Returns Pearson kurtosis minus 3, without sample bias correction. */
-    public static function excessKurtosis(array|Vector $data): Number
+    /** @param bool $precision True keeps the default decimal backend; false selects floats where supported. */
+    public static function excessKurtosis(array|Vector $data, bool $precision = true): Number
     {
-        return self::kurtosis($data)->sub(Number::of(3));
+        return self::kurtosis($data, $precision)->sub(Number::of(3));
     }
 
     public static function covariance(
         array|Vector $left,
         array|Vector $right,
         bool $sample = false,
+        bool $precision = true,
     ): Number {
         if (self::count($left) === 0 || self::count($right) === 0) {
             $message = $sample
@@ -339,13 +382,17 @@ final class Statistics
             throw new InvalidArgumentException($message);
         }
 
-        [$leftValues, $rightValues] = self::pairedValues($left, $right);
+        [$leftValues, $rightValues] = self::pairedValues($left, $right, $precision);
         return self::covarianceOf($leftValues, $rightValues, $sample);
     }
 
-    public static function correlation(array|Vector $left, array|Vector $right): Number
+    public static function correlation(
+        array|Vector $left,
+        array|Vector $right,
+        bool $precision = true,
+    ): Number
     {
-        [$leftValues, $rightValues] = self::pairedValues($left, $right);
+        [$leftValues, $rightValues] = self::pairedValues($left, $right, $precision);
         $covariance = self::covarianceOf($leftValues, $rightValues, false);
         $leftDeviation = self::populationVarianceOf($leftValues)->sqrt();
         $rightDeviation = self::populationVarianceOf($rightValues)->sqrt();
@@ -360,9 +407,13 @@ final class Statistics
         return $covariance->div($leftDeviation->mul($rightDeviation));
     }
 
-    public static function covarianceMatrix(Matrix $data, bool $sample = false): Matrix
+    public static function covarianceMatrix(
+        Matrix $data,
+        bool $sample = false,
+        bool $precision = true,
+    ): Matrix
     {
-        $columns = self::matrixColumnValues($data);
+        $columns = self::matrixColumnValues($data, $precision);
 
         $rows = [];
         foreach ($columns as $left) {
@@ -376,9 +427,9 @@ final class Statistics
         return Matrix::of($rows);
     }
 
-    public static function correlationMatrix(Matrix $data): Matrix
+    public static function correlationMatrix(Matrix $data, bool $precision = true): Matrix
     {
-        $columns = self::matrixColumnValues($data);
+        $columns = self::matrixColumnValues($data, $precision);
 
         $rows = [];
         foreach ($columns as $left) {
@@ -392,9 +443,14 @@ final class Statistics
         return Matrix::of($rows);
     }
 
-    public static function weightedMean(array|Vector $data, array|Vector $weights): Number
+    /** @param bool $precision True keeps the default decimal backend; false selects floats where supported. */
+    public static function weightedMean(
+        array|Vector $data,
+        array|Vector $weights,
+        bool $precision = true,
+    ): Number
     {
-        [$values, $weights] = self::pairedValues($data, $weights);
+        [$values, $weights] = self::pairedValues($data, $weights, $precision);
         $weightedSum = Number::of(0);
         $weightSum = Number::of(0);
 
@@ -414,9 +470,14 @@ final class Statistics
     /**
      * Computes weighted population variance using the denominator sum(w_i).
      */
-    public static function weightedVariance(array|Vector $data, array|Vector $weights): Number
+    /** @param bool $precision True keeps the default decimal backend; false selects floats where supported. */
+    public static function weightedVariance(
+        array|Vector $data,
+        array|Vector $weights,
+        bool $precision = true,
+    ): Number
     {
-        [$values, $weights] = self::pairedValues($data, $weights);
+        [$values, $weights] = self::pairedValues($data, $weights, $precision);
         $zero = Number::of(0);
         $weightedSum = $zero;
         $weightSum = $zero;
@@ -443,7 +504,7 @@ final class Statistics
     }
 
     /** @return list<Number> */
-    private static function values(array|Vector $data): array
+    private static function values(array|Vector $data, bool $precision = true): array
     {
         $values = $data instanceof Vector ? $data->values() : $data;
 
@@ -452,7 +513,9 @@ final class Statistics
         }
 
         return array_map(
-            static fn (int|float|string|Number $value): Number => Number::of($value),
+            static function (int|float|string|Number $value) use ($precision): Number {
+                return Number::of($value)->withBackend(! $precision);
+            },
             array_values($values)
         );
     }
@@ -546,20 +609,20 @@ final class Statistics
     }
 
     /** @return list<list<Number>> */
-    private static function matrixColumnValues(Matrix $data): array
+    private static function matrixColumnValues(Matrix $data, bool $precision = true): array
     {
         $columns = [];
         for ($column = 0; $column < $data->columns(); $column++) {
-            $columns[] = self::values($data->column($column));
+            $columns[] = self::values($data->column($column), $precision);
         }
 
         return $columns;
     }
 
     /** @return list<Number> */
-    private static function sortedValues(array|Vector $data): array
+    private static function sortedValues(array|Vector $data, bool $precision = true): array
     {
-        $values = self::values($data);
+        $values = self::values($data, $precision);
 
         usort(
             $values,
@@ -570,10 +633,14 @@ final class Statistics
     }
 
     /** @return array{0:list<Number>,1:list<Number>} */
-    private static function pairedValues(array|Vector $left, array|Vector $right): array
+    private static function pairedValues(
+        array|Vector $left,
+        array|Vector $right,
+        bool $precision = true,
+    ): array
     {
-        $leftValues = self::values($left);
-        $rightValues = self::values($right);
+        $leftValues = self::values($left, $precision);
+        $rightValues = self::values($right, $precision);
         if (count($leftValues) !== count($rightValues)) {
             throw new InvalidArgumentException('Statistical data must have matching lengths.');
         }

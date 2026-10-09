@@ -40,6 +40,11 @@ final class BoxConstraint
         return $this->upper;
     }
 
+    public function offPrecision(): self
+    {
+        return new self($this->lower->offPrecision(), $this->upper->offPrecision());
+    }
+
     public function dimension(): int
     {
         return $this->lower->dimension();

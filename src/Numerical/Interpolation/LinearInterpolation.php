@@ -19,12 +19,14 @@ final class LinearInterpolation
         int|float|string|Number $x1,
         int|float|string|Number $y1,
         int|float|string|Number $x,
+        bool $precision = true,
     ): Number {
-        $x0Value = Number::of($x0);
-        $y0Value = Number::of($y0);
-        $x1Value = Number::of($x1);
-        $y1Value = Number::of($y1);
-        $xValue = Number::of($x);
+        $backend = ! $precision;
+        $x0Value = Number::of($x0)->withBackend($backend);
+        $y0Value = Number::of($y0)->withBackend($backend);
+        $x1Value = Number::of($x1)->withBackend($backend);
+        $y1Value = Number::of($y1)->withBackend($backend);
+        $xValue = Number::of($x)->withBackend($backend);
 
         if ($x0Value->compare($x1Value) === 0) {
             throw new InvalidArgumentException('Linear interpolation requires distinct x values.');

@@ -58,6 +58,18 @@ final class VectorTest extends TestCase
         self::assertSame(['1', '2', '3'], $this->valuesOf($left));
     }
 
+    public function testOffPrecisionPropagatesAcrossVectorValues(): void
+    {
+        $vector = Vector::of(0.1, 0.2)->offPrecision();
+
+        self::assertSame('float', $vector->get(0)->backend());
+        self::assertSame('float', $vector->get(1)->backend());
+        self::assertSame(['0.30000000000000004', '0.4'], array_map(
+            static fn (Number $value): string => $value->add(0.2)->value(),
+            $vector->values()
+        ));
+    }
+
     public function testDimensionMismatchIsRejected(): void
     {
         $this->expectException(InvalidArgumentException::class);

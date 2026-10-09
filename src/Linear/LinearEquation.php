@@ -30,6 +30,11 @@ final class LinearEquation
         return $this->constant;
     }
 
+    public function offPrecision(): self
+    {
+        return new self($this->coefficients->offPrecision(), $this->constant->offPrecision());
+    }
+
     public function variables(): int
     {
         return $this->coefficients->dimension();

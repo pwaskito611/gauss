@@ -36,4 +36,14 @@ final class OptimizationResult
     {
         return $this->converged;
     }
+
+    public function offPrecision(): self
+    {
+        return new self(
+            $this->point->offPrecision(),
+            $this->value->offPrecision(),
+            $this->iterations,
+            $this->converged,
+        );
+    }
 }

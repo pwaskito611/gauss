@@ -31,6 +31,11 @@ final class Segment
         return $this->end;
     }
 
+    public function offPrecision(): self
+    {
+        return new self($this->start->offPrecision(), $this->end->offPrecision());
+    }
+
     /**
      * Returns the Euclidean length; the Number domain must support its sqrt.
      */

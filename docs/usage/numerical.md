@@ -6,6 +6,12 @@ The `Gauss\Numerical` namespace provides reusable routines for numerical differe
 
 This documentation is implementation-aware: it describes the public API and validation rules that are actually enforced by the current source code.
 
+Numeric methods accept a trailing `bool $precision = true`. The default keeps
+BCMath; passing `false` selects float arithmetic for algorithm-owned inputs and
+intermediates. Callback arguments and results are rebound at the algorithm
+boundary, but calculations performed independently inside a user callback
+remain outside Gauss's control. See [Precision modes](precision.md).
+
 ## Core routines
 
 The numerical module currently exposes these 10 implementations:

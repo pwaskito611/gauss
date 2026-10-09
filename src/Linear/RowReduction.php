@@ -31,6 +31,11 @@ final class RowReduction
         return new self($matrix);
     }
 
+    public function offPrecision(): self
+    {
+        return new self($this->matrix->offPrecision());
+    }
+
     /** Returns row echelon form with each leading pivot normalized to one. */
     public function echelonForm(): Matrix
     {

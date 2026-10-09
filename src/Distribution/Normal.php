@@ -45,12 +45,19 @@ final class Normal implements ContinuousDistribution
      */
     public static function of(
         int|float|string|Number $mean,
-        int|float|string|Number $standardDeviation
+        int|float|string|Number $standardDeviation,
+        bool $precision = true,
     ): self {
+        $backend = ! $precision;
         return new self(
-            Number::of($mean),
-            Number::of($standardDeviation)
+            Number::of($mean)->withBackend($backend),
+            Number::of($standardDeviation)->withBackend($backend)
         );
+    }
+
+    public function offPrecision(): self
+    {
+        return new self($this->mean->offPrecision(), $this->standardDeviation->offPrecision());
     }
 
     /**
@@ -64,7 +71,12 @@ final class Normal implements ContinuousDistribution
             ->sub($this->mean)
             ->div($this->standardDeviation);
 
-        $twoPi = Number::of(2)->mul(Number::pi());
+        $floatBackend = $value->usesFloatBackend()
+            || $this->mean->usesFloatBackend()
+            || $this->standardDeviation->usesFloatBackend();
+        $twoPi = Number::of(2)
+            ->withBackend($floatBackend)
+            ->mul(Number::pi()->withBackend($floatBackend));
 
         $normalizer = $this->standardDeviation
             ->mul($twoPi->sqrt());
@@ -93,7 +105,13 @@ final class Normal implements ContinuousDistribution
             ->sub($this->mean)
             ->div($this->standardDeviation);
 
-        $sqrtTwo = Number::of(2)->sqrt();
+        $sqrtTwo = Number::of(2)
+            ->withBackend(
+                $value->usesFloatBackend()
+                || $this->mean->usesFloatBackend()
+                || $this->standardDeviation->usesFloatBackend()
+            )
+            ->sqrt();
 
         $erf = $this->erfApprox(
             $z->div($sqrtTwo)
@@ -130,7 +148,7 @@ final class Normal implements ContinuousDistribution
     private function erfApprox(Number $x): Number
     {
         if ($x->compare(0) === 0) {
-            return Number::of(0);
+            return Number::of(0)->withBackend($x->usesFloatBackend());
         }
 
         $sign = $x->compare(0) < 0
@@ -139,15 +157,16 @@ final class Normal implements ContinuousDistribution
 
         $abs = $x->abs();
 
-        $a1 = Number::of(self::A1);
-        $a2 = Number::of(self::A2);
-        $a3 = Number::of(self::A3);
-        $a4 = Number::of(self::A4);
-        $a5 = Number::of(self::A5);
-        $p = Number::of(self::P);
+        $floatBackend = $x->usesFloatBackend();
+        $a1 = Number::of(self::A1)->withBackend($floatBackend);
+        $a2 = Number::of(self::A2)->withBackend($floatBackend);
+        $a3 = Number::of(self::A3)->withBackend($floatBackend);
+        $a4 = Number::of(self::A4)->withBackend($floatBackend);
+        $a5 = Number::of(self::A5)->withBackend($floatBackend);
+        $p = Number::of(self::P)->withBackend($floatBackend);
 
-        $t = Number::of(1)->div(
-            Number::of(1)->add(
+        $t = Number::of(1)->withBackend($floatBackend)->div(
+            Number::of(1)->withBackend($floatBackend)->add(
                 $p->mul($abs)
             )
         );
@@ -163,11 +182,11 @@ final class Normal implements ContinuousDistribution
             ->add($a1)
             ->mul($t);
 
-        $exponential = Number::of(-1)
+        $exponential = Number::of(-1)->withBackend($floatBackend)
             ->mul($abs->pow(2))
             ->exp();
 
-        $y = Number::of(1)->sub(
+        $y = Number::of(1)->withBackend($floatBackend)->sub(
             $polynomial->mul($exponential)
         );
 

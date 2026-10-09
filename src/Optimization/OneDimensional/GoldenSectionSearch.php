@@ -25,8 +25,9 @@ final class GoldenSectionSearch
         int|float|string|Number $upper,
         int|float|string|Number $tolerance = '0.000001',
         int $maxIterations = 1000,
+        bool $precision = true,
     ): OptimizationResult {
-        return self::optimize($objective, $lower, $upper, $tolerance, $maxIterations, false);
+        return self::optimize($objective, $lower, $upper, $tolerance, $maxIterations, false, $precision);
     }
 
     /**
@@ -38,8 +39,9 @@ final class GoldenSectionSearch
         int|float|string|Number $upper,
         int|float|string|Number $tolerance = '0.000001',
         int $maxIterations = 1000,
+        bool $precision = true,
     ): OptimizationResult {
-        return self::optimize($objective, $lower, $upper, $tolerance, $maxIterations, true);
+        return self::optimize($objective, $lower, $upper, $tolerance, $maxIterations, true, $precision);
     }
 
     /**
@@ -52,10 +54,11 @@ final class GoldenSectionSearch
         int|float|string|Number $tolerance,
         int $maxIterations,
         bool $maximize,
+        bool $precision,
     ): OptimizationResult {
-        $a = Number::of($lower);
-        $b = Number::of($upper);
-        $tol = Number::of($tolerance);
+        $a = Number::of($lower)->withBackend(! $precision);
+        $b = Number::of($upper)->withBackend(! $precision);
+        $tol = Number::of($tolerance)->withBackend(! $precision);
 
         if ($a->compare($b) >= 0) {
             throw new InvalidArgumentException('Golden section search requires a lower bound smaller than the upper bound.');
@@ -128,6 +131,7 @@ final class GoldenSectionSearch
     private static function evaluate(callable $objective, Number $point, bool $maximize): Number
     {
         $value = Number::of($objective($point));
+        $value = $value->withBackend($point->usesFloatBackend());
 
         return $maximize ? $value->mul(-1) : $value;
     }

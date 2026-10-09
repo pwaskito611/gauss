@@ -30,6 +30,11 @@ final class LinearMap
         return $this->matrix;
     }
 
+    public function offPrecision(): self
+    {
+        return new self($this->matrix->offPrecision());
+    }
+
     public function domainDimension(): int
     {
         return $this->matrix->columns();

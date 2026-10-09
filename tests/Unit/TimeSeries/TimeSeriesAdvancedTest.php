@@ -80,6 +80,17 @@ final class TimeSeriesAdvancedTest extends TestCase
         );
     }
 
+    public function testForecastingMetricPrecisionFlagSelectsBackend(): void
+    {
+        $maeDefault = MAE::calculate([1, 2], [2, 4]);
+        $maeFloat = MAE::calculate([1, 2], [2, 4], false);
+        self::assertSame('bcmath', MSE::calculate([1, 2], [2, 4])->backend());
+        self::assertSame('float', MSE::calculate([1, 2], [2, 4], false)->backend());
+        self::assertSame('bcmath', $maeDefault->backend());
+        self::assertSame('float', $maeFloat->backend());
+        self::assertSame('1.5', $maeFloat->value());
+    }
+
     public function testForecastingMetricsRejectEmptyInputsAndZeroActual(): void
     {
         $this->expectException(\InvalidArgumentException::class);

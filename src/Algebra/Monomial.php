@@ -41,6 +41,11 @@ final class Monomial
         return $this->coefficient;
     }
 
+    public function offPrecision(): self
+    {
+        return new self($this->coefficient->offPrecision(), $this->degree);
+    }
+
     public function degree(): int
     {
         return $this->degree;

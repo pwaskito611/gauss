@@ -2,7 +2,7 @@
 
 A precise and composable mathematical toolkit for PHP, designed to build reliable mathematical models from reusable mathematical primitives.
 
-Gauss combines exact decimal arithmetic, algebraic structures, probability primitives, linear algebra, and statistical operations in one coherent library. The intent is not to hide mathematics behind a framework-like abstraction, but to make the mathematical operation explicit in the source code itself.
+Gauss combines decimal arithmetic, algebraic structures, probability primitives, linear algebra, and statistical operations in one coherent library. BCMath-backed decimal arithmetic is the default, with native-float arithmetic available explicitly for supported calculations. The intent is not to hide mathematics behind a framework-like abstraction, but to make the mathematical operation explicit in the source code itself.
 
 ## Features
 
@@ -12,6 +12,7 @@ Gauss combines exact decimal arithmetic, algebraic structures, probability primi
 * Linear algebra with vectors, matrices, and system solving
 * Probability and distribution primitives for statistical modelling
 * Support for numerical and optimization workflows
+* Opt-in native-float arithmetic alongside the default BCMath backend
 * Composable building blocks suitable for custom domain models
 * Explicit mathematical structure that is easier to inspect, test, and validate
 
@@ -55,9 +56,32 @@ This demonstrates the core Gauss pattern: a precise numeric primitive, explicit 
 
 ## Why Gauss?
 
+### Selectable arithmetic backend
+
+BCMath remains the default. For supported numeric calculations, callers can
+explicitly select native-float arithmetic with `Number::offPrecision()` or a
+trailing `precision: false` argument on supported APIs:
+
+```php
+use Gauss\Number\Number;
+use Gauss\Statistics\Statistics;
+
+$floatNumber = Number::of('0.1')->offPrecision();
+$floatMean = Statistics::mean([1, 2, 3], precision: false);
+
+echo $floatNumber->add('0.2')->value(); // 0.30000000000000004 (typical)
+```
+
+Float mode can be faster for some workloads, but has different rounding,
+overflow, and underflow behavior. It is never selected automatically. See the
+[precision mode guide](docs/usage/precision.md) for supported APIs, propagation,
+and limitations.
+
 ### Precision
 
-The numeric foundation is built around `Number`, which keeps arithmetic in a decimal-string based system instead of depending solely on native PHP float behavior. This makes it safer for precise operations that need controlled numeric representation.
+The numeric foundation is built around `Number`, which defaults to decimal-
+string-based arithmetic instead of depending solely on native PHP float
+behavior. Supported calculations can opt into float mode explicitly.
 
 ### Explicit mathematics
 
@@ -195,6 +219,7 @@ It demonstrates how Gauss primitives can be assembled into a larger probabilisti
 ### Usage by module
 
 * [docs/usage/number.md](docs/usage/number.md)
+* [docs/usage/precision.md](docs/usage/precision.md)
 * [docs/usage/algebra.md](docs/usage/algebra.md)
 * [docs/usage/linear.md](docs/usage/linear.md)
 * [docs/usage/geometry.md](docs/usage/geometry.md)
@@ -217,6 +242,7 @@ It demonstrates how Gauss primitives can be assembled into a larger probabilisti
 * [docs/technical/architecture.md](docs/technical/architecture.md)
 * [docs/technical/number.md](docs/technical/number.md)
 * [docs/technical/precision.md](docs/technical/precision.md)
+* [docs/technical/off-precision-audit.md](docs/technical/off-precision-audit.md)
 * [docs/technical/type-system.md](docs/technical/type-system.md)
 * [docs/technical/composability.md](docs/technical/composability.md)
 * [docs/technical/module-dependencies.md](docs/technical/module-dependencies.md)
@@ -229,7 +255,7 @@ It demonstrates how Gauss primitives can be assembled into a larger probabilisti
 
 Gauss organizes functionality around mathematical concerns rather than a single monolithic layer:
 
-* `Number` — exact decimal arithmetic and numeric representation
+* `Number` — default BCMath decimal arithmetic and numeric representation
 * `Algebra` — polynomials and symbolic expression building blocks
 * `Linear` — vectors, matrices, and solvers
 * `Probability` — probability values and event-based semantics

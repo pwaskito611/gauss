@@ -35,6 +35,14 @@ final class Line
         return $this->direction;
     }
 
+    public function offPrecision(): self
+    {
+        return new self(
+            $this->point->offPrecision(),
+            $this->direction->offPrecision(),
+        );
+    }
+
     public function contains(Point $point): bool
     {
         return $point->coordinates()->sub($this->point->coordinates())->isParallelTo($this->direction);

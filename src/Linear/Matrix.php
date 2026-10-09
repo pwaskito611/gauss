@@ -127,6 +127,19 @@ final class Matrix
         return $this->values[$row][$column];
     }
 
+    public function offPrecision(): self
+    {
+        $rows = array_map(
+            static fn (array $row): array => array_map(
+                static fn (Number $value): Number => $value->offPrecision(),
+                $row
+            ),
+            $this->values
+        );
+
+        return new self($rows, $this->zero->offPrecision());
+    }
+
     public function row(int $index): Vector
     {
         if ($index < 0 || $index >= $this->rowCount) {

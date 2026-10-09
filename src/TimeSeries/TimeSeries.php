@@ -52,6 +52,14 @@ final class TimeSeries
         return count($this->observations);
     }
 
+    public function offPrecision(): self
+    {
+        return new self(array_map(
+            static fn (Observation $observation): Number => $observation->value()->offPrecision(),
+            $this->observations
+        ));
+    }
+
     public function first(): Observation
     {
         return $this->observations[0];
@@ -73,8 +81,17 @@ final class TimeSeries
 
     public function map(callable $transform): self
     {
+        $floatBackend = array_reduce(
+            $this->observations,
+            static fn (bool $carry, Observation $observation): bool => $carry || $observation->value()->usesFloatBackend(),
+            false
+        );
+
         return new self(array_map(
-            static fn (Observation $observation): Number => Number::of($transform($observation->value())),
+            static function (Observation $observation) use ($transform, $floatBackend): Number {
+                $mapped = Number::of($transform($observation->value()));
+                return $mapped->usesFloatBackend() ? $mapped : $mapped->withBackend($floatBackend);
+            },
             $this->observations
         ));
     }
