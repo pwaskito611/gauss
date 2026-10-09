@@ -4,6 +4,11 @@ A precise and composable mathematical toolkit for PHP, designed to build reliabl
 
 Gauss combines decimal arithmetic, algebraic structures, probability primitives, linear algebra, and statistical operations in one coherent library. BCMath-backed decimal arithmetic is the default, with native-float arithmetic available explicitly for supported calculations. The intent is not to hide mathematics behind a framework-like abstraction, but to make the mathematical operation explicit in the source code itself.
 
+Gauss supports opt-in native-float calculations through `Number::offPrecision()`
+and the `precision: false` argument on supported APIs. BCMath remains the default.
+See the [precision mode guide](docs/usage/precision.md) for supported modules,
+propagation behavior, and numeric limitations.
+
 ## Features
 
 * Decimal-backed numeric core using `Number`
